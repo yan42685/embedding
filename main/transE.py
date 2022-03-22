@@ -99,9 +99,9 @@ class TransE:
         self.margin = margin
         self.norm = norm
         self.loss = 0.0
-        self.__vector_init()
+        self._vector_init()
 
-    def __vector_init(self):
+    def _vector_init(self):
         for entity in self.entities:
             entity_vector = np.random.uniform(-6.0 / np.sqrt(self.dimension), 6.0 / np.sqrt(self.dimension),
                                               self.dimension)
@@ -115,17 +115,17 @@ class TransE:
             # relation_vector = norm_l2(relation_vector)
             self.relation_vector_dict[relation] = relation_vector
 
-    def train(self, num_epochs=1, num_batches=100, data_set_name=""):
+    def train(self, epoch_count=1, batch_count=100, data_set_name=""):
 
-        batch_size = int(len(self.facts) / num_batches)
+        batch_size = int(len(self.facts) / batch_count)
         print("batch size: ", batch_size)
-        for epoch in range(num_epochs):
+        for epoch in range(epoch_count):
             start_time = time.time()
             self.loss = 0.0
             for entity in self.entity_vector_dict.keys():
                 self.entity_vector_dict[entity] = scale_to_unit_length(self.entity_vector_dict[entity])
 
-            for batch in range(num_batches):
+            for batch in range(batch_count):
                 positive_samples = random.sample(self.facts, batch_size)
 
                 sample_pairs = []
@@ -148,27 +148,20 @@ class TransE:
                     if (positive_sample, negative_sample) not in sample_pairs:
                         sample_pairs.append((positive_sample, negative_sample))
 
-                self.__update_embedding(sample_pairs)
+                self._update_embedding(sample_pairs)
             end_time = time.time()
-            print("epoch: ", num_epochs, "cost time: %s" % (round((end_time - start_time), 3)))
+            print("epoch: ", epoch_count, "cost time: %s" % (round((end_time - start_time), 3)))
             print("running loss: ", self.loss)
 
-        self.__output_result(data_set_name, batch_size)
+        self._output_result(data_set_name, batch_size)
 
-    def __update_embedding(self, Tbatch):
+    def _update_embedding(self, Tbatch):
         # deepcopy 可以保证，即使list嵌套list也能让各层的地址不同， 即这里copy_entity_vector_dict 和
         # entity_vector_dict中所有的元素都不同
         copy_entity_vector_dict = copy.deepcopy(self.entity_vector_dict)
         copy_relation_vector_dict = copy.deepcopy(self.relation_vector_dict)
 
         for positive_sample, negative_sample in Tbatch:
-
-            copy_positive_head = copy_entity_vector_dict[positive_sample[0]]
-            copy_positive_tail = copy_entity_vector_dict[positive_sample[2]]
-            copy_relation = copy_relation_vector_dict[positive_sample[1]]
-
-            copy_negative_head = copy_entity_vector_dict[negative_sample[0]]
-            copy_negative_tail = copy_entity_vector_dict[negative_sample[2]]
 
             positive_head = self.entity_vector_dict[positive_sample[0]]
             positive_tail = self.entity_vector_dict[positive_sample[2]]
@@ -207,37 +200,37 @@ class TransE:
                         else:
                             negative_gradient[i] = -1
 
-                copy_positive_head -= self.learning_rate * positive_gradient
-                copy_relation -= self.learning_rate * positive_gradient
-                copy_positive_tail -= -1 * self.learning_rate * positive_gradient
+                positive_head -= self.learning_rate * positive_gradient
+                relation -= self.learning_rate * positive_gradient
+                positive_tail -= -1 * self.learning_rate * positive_gradient
 
-                copy_relation -= -1 * self.learning_rate * negative_gradient
+                relation -= -1 * self.learning_rate * negative_gradient
                 # 如果负例替换的是尾实体，则将头实体的向量表示更新两次
                 if positive_sample[0] == negative_sample[0]:
-                    copy_positive_head -= -1 * self.learning_rate * negative_gradient
-                    copy_negative_tail -= self.learning_rate * negative_gradient
+                    positive_head -= -1 * self.learning_rate * negative_gradient
+                    negative_tail -= self.learning_rate * negative_gradient
                 # 如果负例替换的是头实体，则将尾实体的向量表示更新两次
                 elif positive_sample[2] == negative_sample[2]:
-                    copy_negative_head -= -1 * self.learning_rate * negative_gradient
-                    copy_positive_tail -= self.learning_rate * negative_gradient
+                    negative_head -= -1 * self.learning_rate * negative_gradient
+                    positive_tail -= self.learning_rate * negative_gradient
 
                 # 将头尾实体新的向量表示放缩到单位长度
-                copy_entity_vector_dict[positive_sample[0]] = scale_to_unit_length(copy_positive_head)
-                copy_entity_vector_dict[positive_sample[2]] = scale_to_unit_length(copy_positive_tail)
+                copy_entity_vector_dict[positive_sample[0]] = scale_to_unit_length(positive_head)
+                copy_entity_vector_dict[positive_sample[2]] = scale_to_unit_length(positive_tail)
                 if positive_sample[0] == negative_sample[0]:
                     # 如果负例替换的是尾实体，则更新尾实体的向量表示
-                    copy_entity_vector_dict[negative_sample[2]] = scale_to_unit_length(copy_negative_tail)
+                    copy_entity_vector_dict[negative_sample[2]] = scale_to_unit_length(negative_tail)
                 elif positive_sample[2] == negative_sample[2]:
                     # 如果负例替换的是头实体，则更新头实体的向量表示
-                    copy_entity_vector_dict[negative_sample[0]] = scale_to_unit_length(copy_negative_head)
+                    copy_entity_vector_dict[negative_sample[0]] = scale_to_unit_length(negative_head)
                 # TransE论题提到关系的向量表示不用缩放到单位长度
-                copy_relation_vector_dict[positive_sample[1]] = copy_relation
+                copy_relation_vector_dict[positive_sample[1]] = relation
                 # copy_relation[correct_sample[1]] = self.normalization(relation_copy)
 
         self.entity_vector_dict = copy_entity_vector_dict
         self.relation_vector_dict = copy_relation_vector_dict
 
-    def __output_result(self, data_set_name, batch_size):
+    def _output_result(self, data_set_name, batch_size):
         data_set_name = data_set_name + "_"
         target_dir = "target/"
         if not os.path.exists(target_dir):
