@@ -202,32 +202,36 @@ class TransE:
                         else:
                             negative_gradient[i] = -1
 
+                # 损失函数希望达到的理想情况是，正例的d(h + r, t) 尽可能小，负例的d(h' + r', t') 尽可能大，
+                # 这样才能让总体的loss趋向于0。因此在梯度下降过程中，
+                # 正例中h和r逐渐减小，但t逐渐增大； 负例中h'和r'逐渐增大，而t'逐渐减小
                 positive_head -= self.learning_rate * positive_gradient
-                relation -= self.learning_rate * positive_gradient
-                positive_tail -= -1 * self.learning_rate * positive_gradient
+                positive_tail += self.learning_rate * positive_gradient
 
-                relation -= -1 * self.learning_rate * negative_gradient
-                # 如果负例替换的是尾实体，则将头实体的向量表示更新两次
-                if positive_sample[0] == negative_sample[0]:
-                    positive_head -= -1 * self.learning_rate * negative_gradient
-                    negative_tail -= self.learning_rate * negative_gradient
-                # 如果负例替换的是头实体，则将尾实体的向量表示更新两次
-                elif positive_sample[2] == negative_sample[2]:
-                    negative_head -= -1 * self.learning_rate * negative_gradient
+                # 如果负例替换的是头实体, 则正例的尾实体更新两次, 一次满足正例，一次满足负例
+                if positive_sample[0] != negative_sample[0]:
+                    negative_head += self.learning_rate * negative_gradient
                     positive_tail -= self.learning_rate * negative_gradient
+                # 如果负例替换的是尾实体, 则正例的头实体更新两次
+                elif positive_sample[2] != negative_sample[2]:
+                    negative_tail -= self.learning_rate * negative_gradient
+                    positive_head += self.learning_rate * negative_gradient
 
-                # 将头尾实体新的向量表示放缩到单位长度
+                # 关系永远更新两次
+                relation -= self.learning_rate * positive_gradient
+                relation += self.learning_rate * negative_gradient
+
+                # 将正例头尾实体新的向量表示放缩到单位长度, 并替换原来的向量表示
                 copy_entity_vector_dict[positive_sample[0]] = scale_to_unit_length(positive_head)
                 copy_entity_vector_dict[positive_sample[2]] = scale_to_unit_length(positive_tail)
-                if positive_sample[0] == negative_sample[0]:
-                    # 如果负例替换的是尾实体，则更新尾实体的向量表示
-                    copy_entity_vector_dict[negative_sample[2]] = scale_to_unit_length(negative_tail)
-                elif positive_sample[2] == negative_sample[2]:
-                    # 如果负例替换的是头实体，则更新头实体的向量表示
+                # 将负例中被替换的头实体或尾实体的新向量表示放缩到单位长度, 并替换原来的向量表示
+                if positive_sample[0] != negative_sample[0]:
                     copy_entity_vector_dict[negative_sample[0]] = scale_to_unit_length(negative_head)
+                elif positive_sample[2] != negative_sample[2]:
+                    copy_entity_vector_dict[negative_sample[2]] = scale_to_unit_length(negative_tail)
+
                 # TransE论题提到关系的向量表示不用缩放到单位长度
                 copy_relation_vector_dict[positive_sample[1]] = relation
-                # copy_relation[correct_sample[1]] = self.normalization(relation_copy)
 
         self.entity_vector_dict = copy_entity_vector_dict
         self.relation_vector_dict = copy_relation_vector_dict
