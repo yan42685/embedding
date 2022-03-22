@@ -230,7 +230,7 @@ class TransE:
                 elif positive_sample[2] != negative_sample[2]:
                     copy_entity_vector_dict[negative_sample[2]] = scale_to_unit_length(negative_tail)
 
-                # TransE论题提到关系的向量表示不用缩放到单位长度
+                # TransE论文提到关系的向量表示不用缩放到单位长度
                 copy_relation_vector_dict[positive_sample[1]] = relation
 
         self.entity_vector_dict = copy_entity_vector_dict
