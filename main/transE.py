@@ -129,8 +129,10 @@ class TransE:
                 positive_samples = random.sample(self.facts, batch_size)
 
                 sample_pairs = []
+                # 根据正例构建负例
                 for positive_sample in positive_samples:
                     negative_sample = copy.deepcopy(positive_sample)
+                    # 随机替换正例头实体或尾实体, 得到对应的负例
                     random_choice = np.random.random(1)[0]
                     if random_choice > 0.5:
                         # 替换正例的头实体
@@ -156,104 +158,107 @@ class TransE:
     def __update_embedding(self, Tbatch):
         # deepcopy 可以保证，即使list嵌套list也能让各层的地址不同， 即这里copy_entity 和
         # entitles中所有的elements都不同
-        copy_entity = copy.deepcopy(self.entity_vector_dict)
-        copy_relation = copy.deepcopy(self.relation_vector_dict)
+        copy_entity_dict = copy.deepcopy(self.entity_vector_dict)
+        copy_relation_dict = copy.deepcopy(self.relation_vector_dict)
 
-        for correct_sample, corrupted_sample in Tbatch:
+        for positive_sample, negative_sample in Tbatch:
 
-            correct_copy_head = copy_entity[correct_sample[0]]
-            correct_copy_tail = copy_entity[correct_sample[2]]
-            relation_copy = copy_relation[correct_sample[1]]
+            copy_positive_head = copy_entity_dict[positive_sample[0]]
+            copy_positive_tail = copy_entity_dict[positive_sample[2]]
+            copy_relation = copy_relation_dict[positive_sample[1]]
 
-            corrupted_copy_head = copy_entity[corrupted_sample[0]]
-            corrupted_copy_tail = copy_entity[corrupted_sample[2]]
+            copy_negative_head = copy_entity_dict[negative_sample[0]]
+            copy_negative_tail = copy_entity_dict[negative_sample[2]]
 
-            correct_head = self.entity_vector_dict[correct_sample[0]]
-            correct_tail = self.entity_vector_dict[correct_sample[2]]
-            relation = self.relation_vector_dict[correct_sample[1]]
+            positive_head = self.entity_vector_dict[positive_sample[0]]
+            positive_tail = self.entity_vector_dict[positive_sample[2]]
+            relation = self.relation_vector_dict[positive_sample[1]]
 
-            corrupted_head = self.entity_vector_dict[corrupted_sample[0]]
-            corrupted_tail = self.entity_vector_dict[corrupted_sample[2]]
+            negative_head = self.entity_vector_dict[negative_sample[0]]
+            negative_tail = self.entity_vector_dict[negative_sample[2]]
 
-            # calculate the distance of the triples
+            # 计算向量之间的距离
             if self.norm == 1:
-                correct_distance = norm_l1(correct_head + relation - correct_tail)
-                corrupted_distance = norm_l1(corrupted_head + relation - corrupted_tail)
+                positive_distance = norm_l1(positive_head + relation - positive_tail)
+                negative_distance = norm_l1(negative_head + relation - negative_tail)
 
             else:
-                correct_distance = norm_l2(correct_head + relation - correct_tail)
-                corrupted_distance = norm_l2(corrupted_head + relation - corrupted_tail)
+                positive_distance = norm_l2(positive_head + relation - positive_tail)
+                negative_distance = norm_l2(negative_head + relation - negative_tail)
 
-            loss = self.margin + correct_distance - corrupted_distance
+            loss = self.margin + positive_distance - negative_distance
             if loss > 0:
                 self.loss += loss
 
-                correct_gradient = 2 * (correct_head + relation - correct_tail)
-                corrupted_gradient = 2 * (corrupted_head + relation - corrupted_tail)
+                # 默认是L2范式
+                positive_gradient = 2 * (positive_head + relation - positive_tail)
+                negative_gradient = 2 * (negative_head + relation - negative_tail)
 
+                # 如果是L1范式再改变梯度的具体值
                 if self.norm == 1:
-                    for i in range(len(correct_gradient)):
-                        if correct_gradient[i] > 0:
-                            correct_gradient[i] = 1
+                    for i in range(len(positive_gradient)):
+                        if positive_gradient[i] > 0:
+                            positive_gradient[i] = 1
                         else:
-                            correct_gradient[i] = -1
+                            positive_gradient[i] = -1
 
-                        if corrupted_gradient[i] > 0:
-                            corrupted_gradient[i] = 1
+                        if negative_gradient[i] > 0:
+                            negative_gradient[i] = 1
                         else:
-                            corrupted_gradient[i] = -1
+                            negative_gradient[i] = -1
 
-                correct_copy_head -= self.learning_rate * correct_gradient
-                relation_copy -= self.learning_rate * correct_gradient
-                correct_copy_tail -= -1 * self.learning_rate * correct_gradient
+                copy_positive_head -= self.learning_rate * positive_gradient
+                copy_relation -= self.learning_rate * positive_gradient
+                copy_positive_tail -= -1 * self.learning_rate * positive_gradient
 
-                relation_copy -= -1 * self.learning_rate * corrupted_gradient
-                if correct_sample[0] == corrupted_sample[0]:
-                    # if corrupted_triples replaces the tail entity, the head entity"s embedding need to be updated twice
-                    correct_copy_head -= -1 * self.learning_rate * corrupted_gradient
-                    corrupted_copy_tail -= self.learning_rate * corrupted_gradient
-                elif correct_sample[2] == corrupted_sample[2]:
-                    # if corrupted_triples replaces the head entity, the tail entity"s embedding need to be updated twice
-                    corrupted_copy_head -= -1 * self.learning_rate * corrupted_gradient
-                    correct_copy_tail -= self.learning_rate * corrupted_gradient
+                copy_relation -= -1 * self.learning_rate * negative_gradient
+                # 如果负例替换的是尾实体，则将头实体的向量表示更新两次
+                if positive_sample[0] == negative_sample[0]:
+                    copy_positive_head -= -1 * self.learning_rate * negative_gradient
+                    copy_negative_tail -= self.learning_rate * negative_gradient
+                # 如果负例替换的是头实体，则将尾实体的向量表示更新两次
+                elif positive_sample[2] == negative_sample[2]:
+                    copy_negative_head -= -1 * self.learning_rate * negative_gradient
+                    copy_positive_tail -= self.learning_rate * negative_gradient
 
-                # normalising these new embedding vector, instead of normalising all the embedding together
-                copy_entity[correct_sample[0]] = scale_to_unit_length(correct_copy_head)
-                copy_entity[correct_sample[2]] = scale_to_unit_length(correct_copy_tail)
-                if correct_sample[0] == corrupted_sample[0]:
+                # 将头尾实体新的向量表示放缩到单位长度
+                copy_entity_dict[positive_sample[0]] = scale_to_unit_length(copy_positive_head)
+                copy_entity_dict[positive_sample[2]] = scale_to_unit_length(copy_positive_tail)
+                if positive_sample[0] == negative_sample[0]:
                     # if corrupted_triples replace the tail entity, update the tail entity"s embedding
-                    copy_entity[corrupted_sample[2]] = scale_to_unit_length(corrupted_copy_tail)
-                elif correct_sample[2] == corrupted_sample[2]:
+                    copy_entity_dict[negative_sample[2]] = scale_to_unit_length(copy_negative_tail)
+                elif positive_sample[2] == negative_sample[2]:
                     # if corrupted_triples replace the head entity, update the head entity"s embedding
-                    copy_entity[corrupted_sample[0]] = scale_to_unit_length(corrupted_copy_head)
+                    copy_entity_dict[negative_sample[0]] = scale_to_unit_length(copy_negative_head)
                 # the paper mention that the relation"s embedding don"t need to be normalised
-                copy_relation[correct_sample[1]] = relation_copy
+                copy_relation_dict[positive_sample[1]] = copy_relation
                 # copy_relation[correct_sample[1]] = self.normalization(relation_copy)
 
-        self.entity_vector_dict = copy_entity
-        self.relation_vector_dict = copy_relation
+        self.entity_vector_dict = copy_entity_dict
+        self.relation_vector_dict = copy_relation_dict
 
     def __output_result(self, data_set_name, batch_size):
         data_set_name = data_set_name + "_"
         target_dir = "target/"
         if not os.path.exists(target_dir):
             os.mkdir(target_dir)
+
         with codecs.open(
                 target_dir + data_set_name + "TransE_entity_" + str(self.dimension) + "dim_batch" + str(batch_size),
-                "w") as f1:
+                "w") as file1:
 
             for e in self.entity_vector_dict.keys():
-                f1.write(e + "\t")
-                f1.write(str(list(self.entity_vector_dict[e])))
-                f1.write("\n")
+                file1.write(e + "\t")
+                file1.write(str(list(self.entity_vector_dict[e])))
+                file1.write("\n")
 
         with codecs.open(
                 target_dir + data_set_name + "TransE_relation_" + str(self.dimension) + "dim_batch" + str(batch_size),
-                "w") as f2:
+                "w") as file2:
             for r in self.relation_vector_dict.keys():
-                f2.write(r + "\t")
-                f2.write(str(list(self.relation_vector_dict[r])))
-                f2.write("\n")
+                file2.write(r + "\t")
+                file2.write(str(list(self.relation_vector_dict[r])))
+                file2.write("\n")
 
 
 if __name__ == "__main__":
