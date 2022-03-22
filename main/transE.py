@@ -156,19 +156,19 @@ class TransE:
         self.__output_result(data_set_name, batch_size)
 
     def __update_embedding(self, Tbatch):
-        # deepcopy 可以保证，即使list嵌套list也能让各层的地址不同， 即这里copy_entity 和
-        # entitles中所有的elements都不同
-        copy_entity_dict = copy.deepcopy(self.entity_vector_dict)
-        copy_relation_dict = copy.deepcopy(self.relation_vector_dict)
+        # deepcopy 可以保证，即使list嵌套list也能让各层的地址不同， 即这里copy_entity_vector_dict 和
+        # entity_vector_dict中所有的元素都不同
+        copy_entity_vector_dict = copy.deepcopy(self.entity_vector_dict)
+        copy_relation_vector_dict = copy.deepcopy(self.relation_vector_dict)
 
         for positive_sample, negative_sample in Tbatch:
 
-            copy_positive_head = copy_entity_dict[positive_sample[0]]
-            copy_positive_tail = copy_entity_dict[positive_sample[2]]
-            copy_relation = copy_relation_dict[positive_sample[1]]
+            copy_positive_head = copy_entity_vector_dict[positive_sample[0]]
+            copy_positive_tail = copy_entity_vector_dict[positive_sample[2]]
+            copy_relation = copy_relation_vector_dict[positive_sample[1]]
 
-            copy_negative_head = copy_entity_dict[negative_sample[0]]
-            copy_negative_tail = copy_entity_dict[negative_sample[2]]
+            copy_negative_head = copy_entity_vector_dict[negative_sample[0]]
+            copy_negative_tail = copy_entity_vector_dict[negative_sample[2]]
 
             positive_head = self.entity_vector_dict[positive_sample[0]]
             positive_tail = self.entity_vector_dict[positive_sample[2]]
@@ -222,20 +222,20 @@ class TransE:
                     copy_positive_tail -= self.learning_rate * negative_gradient
 
                 # 将头尾实体新的向量表示放缩到单位长度
-                copy_entity_dict[positive_sample[0]] = scale_to_unit_length(copy_positive_head)
-                copy_entity_dict[positive_sample[2]] = scale_to_unit_length(copy_positive_tail)
+                copy_entity_vector_dict[positive_sample[0]] = scale_to_unit_length(copy_positive_head)
+                copy_entity_vector_dict[positive_sample[2]] = scale_to_unit_length(copy_positive_tail)
                 if positive_sample[0] == negative_sample[0]:
-                    # if corrupted_triples replace the tail entity, update the tail entity"s embedding
-                    copy_entity_dict[negative_sample[2]] = scale_to_unit_length(copy_negative_tail)
+                    # 如果负例替换的是尾实体，则更新尾实体的向量表示
+                    copy_entity_vector_dict[negative_sample[2]] = scale_to_unit_length(copy_negative_tail)
                 elif positive_sample[2] == negative_sample[2]:
-                    # if corrupted_triples replace the head entity, update the head entity"s embedding
-                    copy_entity_dict[negative_sample[0]] = scale_to_unit_length(copy_negative_head)
-                # the paper mention that the relation"s embedding don"t need to be normalised
-                copy_relation_dict[positive_sample[1]] = copy_relation
+                    # 如果负例替换的是头实体，则更新头实体的向量表示
+                    copy_entity_vector_dict[negative_sample[0]] = scale_to_unit_length(copy_negative_head)
+                # TransE论题提到关系的向量表示不用缩放到单位长度
+                copy_relation_vector_dict[positive_sample[1]] = copy_relation
                 # copy_relation[correct_sample[1]] = self.normalization(relation_copy)
 
-        self.entity_vector_dict = copy_entity_dict
-        self.relation_vector_dict = copy_relation_dict
+        self.entity_vector_dict = copy_entity_vector_dict
+        self.relation_vector_dict = copy_relation_vector_dict
 
     def __output_result(self, data_set_name, batch_size):
         data_set_name = data_set_name + "_"
