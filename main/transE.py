@@ -24,7 +24,7 @@ def main(data_set_name):
     entity_ids, relation_ids, facts = load_data(entity_file, relation_file, fact_file)
 
     model = TransE(entity_ids, relation_ids, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=2)
-    model.train(out_file_title=data_set_name + "_")
+    model.train(data_set_name=data_set_name)
 
 
 def load_data(entity_file, relation_file, fact_file):
@@ -99,9 +99,9 @@ class TransE:
         self.margin = margin
         self.norm = norm
         self.loss = 0.0
-        self.vector_init()
+        self.__vector_init()
 
-    def vector_init(self):
+    def __vector_init(self):
         for entity in self.entities:
             entity_vector = np.random.uniform(-6.0 / np.sqrt(self.dimension), 6.0 / np.sqrt(self.dimension),
                                               self.dimension)
@@ -115,64 +115,45 @@ class TransE:
             # relation_vector = norm_l2(relation_vector)
             self.relation_vector_dict[relation] = relation_vector
 
+    def train(self, num_epochs=1, num_batches=100, data_set_name=""):
 
-    def train(self, epoch=1, batch=100, out_file_title=""):
-
-        batch_size = int(len(self.facts) / batch)
+        batch_size = int(len(self.facts) / num_batches)
         print("batch size: ", batch_size)
-        for epoch in range(epoch):
+        for epoch in range(num_epochs):
             start_time = time.time()
             self.loss = 0.0
             for entity in self.entity_vector_dict.keys():
-                self.entity_vector_dict[entity] = scale_to_unit_length(self.entity_vector_dict[entity]);
+                self.entity_vector_dict[entity] = scale_to_unit_length(self.entity_vector_dict[entity])
 
-            for batch in range(batch):
-                batch_samples = random.sample(self.facts, batch_size)
+            for batch in range(num_batches):
+                positive_samples = random.sample(self.facts, batch_size)
 
-                Tbatch = []
-                for sample in batch_samples:
-                    corrupted_sample = copy.deepcopy(sample)
-                    pr = np.random.random(1)[0]
-                    if pr > 0.5:
-                        # change the head entity
-                        corrupted_sample[0] = random.sample(self.entity_vector_dict.keys(), 1)[0]
-                        while corrupted_sample[0] == sample[0]:
-                            corrupted_sample[0] = random.sample(self.entity_vector_dict.keys(), 1)[0]
+                sample_pairs = []
+                for positive_sample in positive_samples:
+                    negative_sample = copy.deepcopy(positive_sample)
+                    random_choice = np.random.random(1)[0]
+                    if random_choice > 0.5:
+                        # 替换正例的头实体
+                        negative_sample[0] = random.sample(self.entities, 1)[0]
+                        while negative_sample[0] == positive_sample[0]:
+                            negative_sample[0] = random.sample(self.entities, 1)[0]
                     else:
-                        # change the tail entity
-                        corrupted_sample[2] = random.sample(self.entity_vector_dict.keys(), 1)[0]
-                        while corrupted_sample[2] == sample[2]:
-                            corrupted_sample[2] = random.sample(self.entity_vector_dict.keys(), 1)[0]
+                        # 替换正例的尾实体
+                        negative_sample[2] = random.sample(self.entities, 1)[0]
+                        while negative_sample[2] == positive_sample[2]:
+                            negative_sample[2] = random.sample(self.entities, 1)[0]
 
-                    if (sample, corrupted_sample) not in Tbatch:
-                        Tbatch.append((sample, corrupted_sample))
+                    if (positive_sample, negative_sample) not in sample_pairs:
+                        sample_pairs.append((positive_sample, negative_sample))
 
-                self.update_triple_embedding(Tbatch)
+                self.__update_embedding(sample_pairs)
             end_time = time.time()
-            print("epoch: ", epoch, "cost time: %s" % (round((end_time - start_time), 3)))
+            print("epoch: ", num_epochs, "cost time: %s" % (round((end_time - start_time), 3)))
             print("running loss: ", self.loss)
 
-        target_dir = "target/"
-        if not os.path.exists(target_dir):
-            os.mkdir(target_dir)
-        with codecs.open(
-                target_dir + out_file_title + "TransE_entity_" + str(self.dimension) + "dim_batch" + str(batch_size),
-                "w") as f1:
+        self.__output_result(data_set_name, batch_size)
 
-            for e in self.entity_vector_dict.keys():
-                f1.write(e + "\t")
-                f1.write(str(list(self.entity_vector_dict[e])))
-                f1.write("\n")
-
-        with codecs.open(
-                target_dir + out_file_title + "TransE_relation_" + str(self.dimension) + "dim_batch" + str(batch_size),
-                "w") as f2:
-            for r in self.relation_vector_dict.keys():
-                f2.write(r + "\t")
-                f2.write(str(list(self.relation_vector_dict[r])))
-                f2.write("\n")
-
-    def update_triple_embedding(self, Tbatch):
+    def __update_embedding(self, Tbatch):
         # deepcopy 可以保证，即使list嵌套list也能让各层的地址不同， 即这里copy_entity 和
         # entitles中所有的elements都不同
         copy_entity = copy.deepcopy(self.entity_vector_dict)
@@ -251,6 +232,28 @@ class TransE:
 
         self.entity_vector_dict = copy_entity
         self.relation_vector_dict = copy_relation
+
+    def __output_result(self, data_set_name, batch_size):
+        data_set_name = data_set_name + "_"
+        target_dir = "target/"
+        if not os.path.exists(target_dir):
+            os.mkdir(target_dir)
+        with codecs.open(
+                target_dir + data_set_name + "TransE_entity_" + str(self.dimension) + "dim_batch" + str(batch_size),
+                "w") as f1:
+
+            for e in self.entity_vector_dict.keys():
+                f1.write(e + "\t")
+                f1.write(str(list(self.entity_vector_dict[e])))
+                f1.write("\n")
+
+        with codecs.open(
+                target_dir + data_set_name + "TransE_relation_" + str(self.dimension) + "dim_batch" + str(batch_size),
+                "w") as f2:
+            for r in self.relation_vector_dict.keys():
+                f2.write(r + "\t")
+                f2.write(str(list(self.relation_vector_dict[r])))
+                f2.write("\n")
 
 
 if __name__ == "__main__":
