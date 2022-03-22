@@ -13,7 +13,7 @@ def main(data_set_name):
     if data_set_name == "free_base":
         entity_file = "data_set/FB15k/entity2id.txt"
         relation_file = "data_set/FB15k/relation2id.txt"
-        fact_file = "data_set/FB15k/train.txt"
+        fact_file = "data_set/FB15k/test.txt"
     elif data_set_name == "word_net":
         entity_file = "data_set/WN18/entity2id.txt"
         relation_file = "data_set/WN18/relation2id.txt"
@@ -21,112 +21,114 @@ def main(data_set_name):
         fact_file = "data_set/WN18/wordnet-mlj12-test.txt"
     else:
         raise RuntimeError("Wrong data set name")
-    entity_set, relation_set, triple_list = load_files(entity_file, relation_file, fact_file)
+    entity_ids, relation_ids, facts = load_data(entity_file, relation_file, fact_file)
 
-    model = TransE(entity_set, relation_set, triple_list, embedding_dim=50, lr=0.01, margin=1.0, norm=2)
-    model.data_init()
+    model = TransE(entity_ids, relation_ids, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=2)
+    model.vector_init()
     model.train(out_file_title=data_set_name + "_")
 
 
-entities2id = {}
-relations2id = {}
-
-
-def load_files(entity_file, relation_file, fact_file):
+def load_data(entity_file, relation_file, fact_file):
     print("loading files...")
 
-    entity = []
-    relation = []
-    with open(entity_file, 'r') as file1, open(relation_file, 'r') as file2:
+    entity_id_dict = {}
+    relation_id_dict = {}
+    entity_ids = []
+    relation_ids = []
+    with open(entity_file, "r") as file1, open(relation_file, "r") as file2:
         lines1 = file1.readlines()
         lines2 = file2.readlines()
         for line in lines1:
-            line = line.strip().split('\t')
+            line = line.strip().split("\t")
             if len(line) != 2:
                 continue
-            entities2id[line[0]] = line[1]
-            entity.append(line[1])
+            entity_id_dict[line[0]] = line[1]
+            entity_ids.append(line[1])
 
         for line in lines2:
-            line = line.strip().split('\t')
+            line = line.strip().split("\t")
             if len(line) != 2:
                 continue
-            relations2id[line[0]] = line[1]
-            relation.append(line[1])
+            relation_id_dict[line[0]] = line[1]
+            relation_ids.append(line[1])
 
-    triple_list = []
+    facts = []
 
-    with codecs.open(fact_file, 'r') as f:
-        content = f.readlines()
-        for line in content:
-            triple = line.strip().split("\t")
-            if len(triple) != 3:
+    with codecs.open(fact_file, "r") as file3:
+        lines3 = file3.readlines()
+        for line in lines3:
+            fact = line.strip().split("\t")
+            if len(fact) != 3:
                 continue
 
-            h_ = entities2id[triple[0]]
-            r_ = relations2id[triple[1]]
-            t_ = entities2id[triple[2]]
+            head_id = entity_id_dict[fact[0]]
+            relation_id = relation_id_dict[fact[1]]
+            tail_id = entity_id_dict[fact[2]]
 
-            triple_list.append([h_, r_, t_])
+            facts.append([head_id, relation_id, tail_id])
 
-    print("Complete load. entity : %d , relation : %d , triple : %d" % (
-        len(entity), len(relation), len(triple_list)))
+    print("Loading complete. entity : %d , relation : %d , fact : %d" % (
+        len(entity_ids), len(relation_ids), len(facts)))
 
-    return entity, relation, triple_list
-
-
-def norm_l1(h, r, t):
-    return np.sum(np.fabs(h + r - t))
+    return entity_ids, relation_ids, facts
 
 
-def norm_l2(h, r, t):
-    return np.sum(np.square(h + r - t))
+# 曼哈顿距离
+def norm_l1(vector):
+    return np.linalg.norm(vector, ord=1)
+
+
+# 欧氏距离
+def norm_l2(vector):
+    return np.linalg.norm(vector, ord=2)
+
+# 缩小到欧氏距离的单位长度
+def scale_to_unit_length(vector):
+    return vector / norm_l2(vector)
 
 
 class TransE:
-    def __init__(self, entity_set, relation_set, triple_list, embedding_dim=50, lr=0.01, margin=1.0, norm=1):
-        self.entities = entity_set
-        self.relations = relation_set
-        self.triples = triple_list
-        self.dimension = embedding_dim
-        self.learning_rate = lr
+    def __init__(self, entities, relations, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=1):
+        self.entities = entities
+        self.relations = relations
+        self.facts = facts
+        self.dimension = dimension
+        self.learning_rate = learning_rate
         self.margin = margin
         self.norm = norm
         self.loss = 0.0
 
-    def data_init(self):
-        entityVectorList = {}
-        relationVectorList = {}
+    def vector_init(self):
+        entity_vector_dict = {}
+        relation_vector_dict = {}
         for entity in self.entities:
             entity_vector = np.random.uniform(-6.0 / np.sqrt(self.dimension), 6.0 / np.sqrt(self.dimension),
                                               self.dimension)
-            entityVectorList[entity] = entity_vector
+            entity_vector_dict[entity] = entity_vector
 
         for relation in self.relations:
             relation_vector = np.random.uniform(-6.0 / np.sqrt(self.dimension), 6.0 / np.sqrt(self.dimension),
                                                 self.dimension)
-            relation_vector = self.normalization(relation_vector)
-            relationVectorList[relation] = relation_vector
+            relation_vector = scale_to_unit_length(relation_vector)
+            # 不知道为什么，换成下面这行代码反而lose降低了10%左右
+            # relation_vector = norm_l2(relation_vector)
+            relation_vector_dict[relation] = relation_vector
 
-        self.entities = entityVectorList
-        self.relations = relationVectorList
+        self.entities = entity_vector_dict
+        self.relations = relation_vector_dict
 
-    def normalization(self, vector):
-        return vector / np.linalg.norm(vector)
+    def train(self, epoch=1, batch=100, out_file_title=""):
 
-    def train(self, epochs=1, nbatches=100, out_file_title=''):
-
-        batch_size = int(len(self.triples) / nbatches)
+        batch_size = int(len(self.facts) / batch)
         print("batch size: ", batch_size)
-        for epoch in range(epochs):
+        for epoch in range(epoch):
             start = time.time()
             self.loss = 0.0
-            # Normalise the embedding of the entities to 1
             for entity in self.entities.keys():
-                self.entities[entity] = self.normalization(self.entities[entity]);
+                self.entities[entity] = scale_to_unit_length(self.entities[entity]);
 
-            for batch in range(nbatches):
-                batch_samples = random.sample(self.triples, batch_size)
+            for batch in range(batch):
+                batch_samples = random.sample(self.facts, batch_size)
 
                 Tbatch = []
                 for sample in batch_samples:
@@ -195,12 +197,12 @@ class TransE:
 
             # calculate the distance of the triples
             if self.norm == 1:
-                correct_distance = norm_l1(correct_head, relation, correct_tail)
-                corrupted_distance = norm_l1(corrupted_head, relation, corrupted_tail)
+                correct_distance = norm_l1(correct_head + relation - correct_tail)
+                corrupted_distance = norm_l1(corrupted_head + relation - corrupted_tail)
 
             else:
-                correct_distance = norm_l2(correct_head, relation, correct_tail)
-                corrupted_distance = norm_l2(corrupted_head, relation, corrupted_tail)
+                correct_distance = norm_l2(correct_head + relation - correct_tail)
+                corrupted_distance = norm_l2(corrupted_head + relation - corrupted_tail)
 
             loss = self.margin + correct_distance - corrupted_distance
             if loss > 0:
@@ -227,24 +229,24 @@ class TransE:
 
                 relation_copy -= -1 * self.learning_rate * corrupted_gradient
                 if correct_sample[0] == corrupted_sample[0]:
-                    # if corrupted_triples replaces the tail entity, the head entity's embedding need to be updated twice
+                    # if corrupted_triples replaces the tail entity, the head entity"s embedding need to be updated twice
                     correct_copy_head -= -1 * self.learning_rate * corrupted_gradient
                     corrupted_copy_tail -= self.learning_rate * corrupted_gradient
                 elif correct_sample[2] == corrupted_sample[2]:
-                    # if corrupted_triples replaces the head entity, the tail entity's embedding need to be updated twice
+                    # if corrupted_triples replaces the head entity, the tail entity"s embedding need to be updated twice
                     corrupted_copy_head -= -1 * self.learning_rate * corrupted_gradient
                     correct_copy_tail -= self.learning_rate * corrupted_gradient
 
                 # normalising these new embedding vector, instead of normalising all the embedding together
-                copy_entity[correct_sample[0]] = self.normalization(correct_copy_head)
-                copy_entity[correct_sample[2]] = self.normalization(correct_copy_tail)
+                copy_entity[correct_sample[0]] = scale_to_unit_length(correct_copy_head)
+                copy_entity[correct_sample[2]] = scale_to_unit_length(correct_copy_tail)
                 if correct_sample[0] == corrupted_sample[0]:
-                    # if corrupted_triples replace the tail entity, update the tail entity's embedding
-                    copy_entity[corrupted_sample[2]] = self.normalization(corrupted_copy_tail)
+                    # if corrupted_triples replace the tail entity, update the tail entity"s embedding
+                    copy_entity[corrupted_sample[2]] = scale_to_unit_length(corrupted_copy_tail)
                 elif correct_sample[2] == corrupted_sample[2]:
-                    # if corrupted_triples replace the head entity, update the head entity's embedding
-                    copy_entity[corrupted_sample[0]] = self.normalization(corrupted_copy_head)
-                # the paper mention that the relation's embedding don't need to be normalised
+                    # if corrupted_triples replace the head entity, update the head entity"s embedding
+                    copy_entity[corrupted_sample[0]] = scale_to_unit_length(corrupted_copy_head)
+                # the paper mention that the relation"s embedding don"t need to be normalised
                 copy_relation[correct_sample[1]] = relation_copy
                 # copy_relation[correct_sample[1]] = self.normalization(relation_copy)
 
