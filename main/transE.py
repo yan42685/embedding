@@ -24,7 +24,6 @@ def main(data_set_name):
     entity_ids, relation_ids, facts = load_data(entity_file, relation_file, fact_file)
 
     model = TransE(entity_ids, relation_ids, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=2)
-    model.vector_init()
     model.train(out_file_title=data_set_name + "_")
 
 
@@ -82,6 +81,7 @@ def norm_l1(vector):
 def norm_l2(vector):
     return np.linalg.norm(vector, ord=2)
 
+
 # 缩小到欧氏距离的单位长度
 def scale_to_unit_length(vector):
     return vector / norm_l2(vector)
@@ -91,20 +91,21 @@ class TransE:
     def __init__(self, entities, relations, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=1):
         self.entities = entities
         self.relations = relations
+        self.entity_vector_dict = {}
+        self.relation_vector_dict = {}
         self.facts = facts
         self.dimension = dimension
         self.learning_rate = learning_rate
         self.margin = margin
         self.norm = norm
         self.loss = 0.0
+        self.vector_init()
 
     def vector_init(self):
-        entity_vector_dict = {}
-        relation_vector_dict = {}
         for entity in self.entities:
             entity_vector = np.random.uniform(-6.0 / np.sqrt(self.dimension), 6.0 / np.sqrt(self.dimension),
                                               self.dimension)
-            entity_vector_dict[entity] = entity_vector
+            self.entity_vector_dict[entity] = entity_vector
 
         for relation in self.relations:
             relation_vector = np.random.uniform(-6.0 / np.sqrt(self.dimension), 6.0 / np.sqrt(self.dimension),
@@ -112,20 +113,18 @@ class TransE:
             relation_vector = scale_to_unit_length(relation_vector)
             # 不知道为什么，换成下面这行代码反而lose降低了10%左右
             # relation_vector = norm_l2(relation_vector)
-            relation_vector_dict[relation] = relation_vector
+            self.relation_vector_dict[relation] = relation_vector
 
-        self.entities = entity_vector_dict
-        self.relations = relation_vector_dict
 
     def train(self, epoch=1, batch=100, out_file_title=""):
 
         batch_size = int(len(self.facts) / batch)
         print("batch size: ", batch_size)
         for epoch in range(epoch):
-            start = time.time()
+            start_time = time.time()
             self.loss = 0.0
-            for entity in self.entities.keys():
-                self.entities[entity] = scale_to_unit_length(self.entities[entity]);
+            for entity in self.entity_vector_dict.keys():
+                self.entity_vector_dict[entity] = scale_to_unit_length(self.entity_vector_dict[entity]);
 
             for batch in range(batch):
                 batch_samples = random.sample(self.facts, batch_size)
@@ -136,21 +135,21 @@ class TransE:
                     pr = np.random.random(1)[0]
                     if pr > 0.5:
                         # change the head entity
-                        corrupted_sample[0] = random.sample(self.entities.keys(), 1)[0]
+                        corrupted_sample[0] = random.sample(self.entity_vector_dict.keys(), 1)[0]
                         while corrupted_sample[0] == sample[0]:
-                            corrupted_sample[0] = random.sample(self.entities.keys(), 1)[0]
+                            corrupted_sample[0] = random.sample(self.entity_vector_dict.keys(), 1)[0]
                     else:
                         # change the tail entity
-                        corrupted_sample[2] = random.sample(self.entities.keys(), 1)[0]
+                        corrupted_sample[2] = random.sample(self.entity_vector_dict.keys(), 1)[0]
                         while corrupted_sample[2] == sample[2]:
-                            corrupted_sample[2] = random.sample(self.entities.keys(), 1)[0]
+                            corrupted_sample[2] = random.sample(self.entity_vector_dict.keys(), 1)[0]
 
                     if (sample, corrupted_sample) not in Tbatch:
                         Tbatch.append((sample, corrupted_sample))
 
                 self.update_triple_embedding(Tbatch)
-            end = time.time()
-            print("epoch: ", epoch, "cost time: %s" % (round((end - start), 3)))
+            end_time = time.time()
+            print("epoch: ", epoch, "cost time: %s" % (round((end_time - start_time), 3)))
             print("running loss: ", self.loss)
 
         target_dir = "target/"
@@ -160,24 +159,24 @@ class TransE:
                 target_dir + out_file_title + "TransE_entity_" + str(self.dimension) + "dim_batch" + str(batch_size),
                 "w") as f1:
 
-            for e in self.entities.keys():
+            for e in self.entity_vector_dict.keys():
                 f1.write(e + "\t")
-                f1.write(str(list(self.entities[e])))
+                f1.write(str(list(self.entity_vector_dict[e])))
                 f1.write("\n")
 
         with codecs.open(
                 target_dir + out_file_title + "TransE_relation_" + str(self.dimension) + "dim_batch" + str(batch_size),
                 "w") as f2:
-            for r in self.relations.keys():
+            for r in self.relation_vector_dict.keys():
                 f2.write(r + "\t")
-                f2.write(str(list(self.relations[r])))
+                f2.write(str(list(self.relation_vector_dict[r])))
                 f2.write("\n")
 
     def update_triple_embedding(self, Tbatch):
         # deepcopy 可以保证，即使list嵌套list也能让各层的地址不同， 即这里copy_entity 和
         # entitles中所有的elements都不同
-        copy_entity = copy.deepcopy(self.entities)
-        copy_relation = copy.deepcopy(self.relations)
+        copy_entity = copy.deepcopy(self.entity_vector_dict)
+        copy_relation = copy.deepcopy(self.relation_vector_dict)
 
         for correct_sample, corrupted_sample in Tbatch:
 
@@ -188,12 +187,12 @@ class TransE:
             corrupted_copy_head = copy_entity[corrupted_sample[0]]
             corrupted_copy_tail = copy_entity[corrupted_sample[2]]
 
-            correct_head = self.entities[correct_sample[0]]
-            correct_tail = self.entities[correct_sample[2]]
-            relation = self.relations[correct_sample[1]]
+            correct_head = self.entity_vector_dict[correct_sample[0]]
+            correct_tail = self.entity_vector_dict[correct_sample[2]]
+            relation = self.relation_vector_dict[correct_sample[1]]
 
-            corrupted_head = self.entities[corrupted_sample[0]]
-            corrupted_tail = self.entities[corrupted_sample[2]]
+            corrupted_head = self.entity_vector_dict[corrupted_sample[0]]
+            corrupted_tail = self.entity_vector_dict[corrupted_sample[2]]
 
             # calculate the distance of the triples
             if self.norm == 1:
@@ -250,8 +249,8 @@ class TransE:
                 copy_relation[correct_sample[1]] = relation_copy
                 # copy_relation[correct_sample[1]] = self.normalization(relation_copy)
 
-        self.entities = copy_entity
-        self.relations = copy_relation
+        self.entity_vector_dict = copy_entity
+        self.relation_vector_dict = copy_relation
 
 
 if __name__ == "__main__":
