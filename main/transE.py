@@ -24,7 +24,7 @@ def main(data_set_name):
     entity_ids, relation_ids, facts = load_data(entity_file, relation_file, fact_file)
 
     model = TransE(entity_ids, relation_ids, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=2)
-    model.train(data_set_name=data_set_name)
+    model.train(epoch_count=1, data_set_name=data_set_name)
 
 
 def load_data(entity_file, relation_file, fact_file):
@@ -149,8 +149,10 @@ class TransE:
                         sample_pairs.append((positive_sample, negative_sample))
 
                 self._update_embedding(sample_pairs)
+            # 让学习率衰减
+            self.learning_rate = pow(0.95, epoch + 1) * self.learning_rate
             end_time = time.time()
-            print("epoch: ", epoch_count, "cost time: %s" % (round((end_time - start_time), 3)))
+            print("epoch: ", epoch + 1, "cost time: %s" % (round((end_time - start_time), 3)))
             print("running loss: ", self.loss)
 
         self._output_result(data_set_name, batch_size)
