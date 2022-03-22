@@ -7,9 +7,6 @@ import random
 
 
 def main(data_set_name):
-    entity_file = ""
-    relation_file = ""
-    fact_file = ""
     if data_set_name == "free_base":
         entity_file = "data_set/FB15k/entity2id.txt"
         relation_file = "data_set/FB15k/relation2id.txt"
