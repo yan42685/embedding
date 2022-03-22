@@ -88,7 +88,7 @@ instance/
 docs/_build/
 
 # PyBuilder
-target/
+main/target/
 
 # Jupyter Notebook
 .ipynb_checkpoints

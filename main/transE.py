@@ -1,21 +1,45 @@
+import os
 import codecs
 import numpy as np
 import copy
 import time
 import random
 
+
+def main(data_set_name):
+    entity_file = ""
+    relation_file = ""
+    fact_file = ""
+    if data_set_name == "free_base":
+        entity_file = "data_set/FB15k/entity2id.txt"
+        relation_file = "data_set/FB15k/relation2id.txt"
+        fact_file = "data_set/FB15k/train.txt"
+    elif data_set_name == "word_net":
+        entity_file = "data_set/WN18/entity2id.txt"
+        relation_file = "data_set/WN18/relation2id.txt"
+        # 训练耗时：test集13秒，train集100秒
+        fact_file = "data_set/WN18/wordnet-mlj12-test.txt"
+    else:
+        raise RuntimeError("Wrong data set name")
+    entity_set, relation_set, triple_list = load_files(entity_file, relation_file, fact_file)
+
+    model = TransE(entity_set, relation_set, triple_list, embedding_dim=50, lr=0.01, margin=1.0, norm=2)
+    model.data_init()
+    model.train(out_file_title=data_set_name + "_")
+
+
 entities2id = {}
 relations2id = {}
 
 
-def load_files(fact_file, entity_file, relation_file):
+def load_files(entity_file, relation_file, fact_file):
     print("loading files...")
 
     entity = []
     relation = []
-    with open(entity_file, 'r') as f1, open(relation_file, 'r') as f2:
-        lines1 = f1.readlines()
-        lines2 = f2.readlines()
+    with open(entity_file, 'r') as file1, open(relation_file, 'r') as file2:
+        lines1 = file1.readlines()
+        lines2 = file2.readlines()
         for line in lines1:
             line = line.strip().split('\t')
             if len(line) != 2:
@@ -30,7 +54,6 @@ def load_files(fact_file, entity_file, relation_file):
             relations2id[line[0]] = line[1]
             relation.append(line[1])
 
-
     triple_list = []
 
     with codecs.open(fact_file, 'r') as f:
@@ -44,11 +67,10 @@ def load_files(fact_file, entity_file, relation_file):
             r_ = relations2id[triple[1]]
             t_ = entities2id[triple[2]]
 
-
             triple_list.append([h_, r_, t_])
 
     print("Complete load. entity : %d , relation : %d , triple : %d" % (
-    len(entity), len(relation), len(triple_list)))
+        len(entity), len(relation), len(triple_list)))
 
     return entity, relation, triple_list
 
@@ -62,9 +84,9 @@ def norm_l2(h, r, t):
 
 
 class TransE:
-    def __init__(self, entity, relation, triple_list, embedding_dim=50, lr=0.01, margin=1.0, norm=1):
-        self.entities = entity
-        self.relations = relation
+    def __init__(self, entity_set, relation_set, triple_list, embedding_dim=50, lr=0.01, margin=1.0, norm=1):
+        self.entities = entity_set
+        self.relations = relation_set
         self.triples = triple_list
         self.dimension = embedding_dim
         self.learning_rate = lr
@@ -72,7 +94,7 @@ class TransE:
         self.norm = norm
         self.loss = 0.0
 
-    def data_initialise(self):
+    def data_init(self):
         entityVectorList = {}
         relationVectorList = {}
         for entity in self.entities:
@@ -92,7 +114,7 @@ class TransE:
     def normalization(self, vector):
         return vector / np.linalg.norm(vector)
 
-    def training_run(self, epochs=1, nbatches=100, out_file_title = ''):
+    def train(self, epochs=1, nbatches=100, out_file_title=''):
 
         batch_size = int(len(self.triples) / nbatches)
         print("batch size: ", batch_size)
@@ -129,14 +151,21 @@ class TransE:
             print("epoch: ", epoch, "cost time: %s" % (round((end - start), 3)))
             print("running loss: ", self.loss)
 
-        with codecs.open(out_file_title +"TransE_entity_" + str(self.dimension) + "dim_batch" + str(batch_size), "w") as f1:
+        target_dir = "target/"
+        if not os.path.exists(target_dir):
+            os.mkdir(target_dir)
+        with codecs.open(
+                target_dir + out_file_title + "TransE_entity_" + str(self.dimension) + "dim_batch" + str(batch_size),
+                "w") as f1:
 
             for e in self.entities.keys():
                 f1.write(e + "\t")
                 f1.write(str(list(self.entities[e])))
                 f1.write("\n")
 
-        with codecs.open(out_file_title +"TransE_relation_" + str(self.dimension) + "dim_batch" + str(batch_size), "w") as f2:
+        with codecs.open(
+                target_dir + out_file_title + "TransE_relation_" + str(self.dimension) + "dim_batch" + str(batch_size),
+                "w") as f2:
             for r in self.relations.keys():
                 f2.write(r + "\t")
                 f2.write(str(list(self.relations[r])))
@@ -223,16 +252,5 @@ class TransE:
         self.relations = copy_relation
 
 
-if __name__ == '__main__':
-    # file1 = "FB15k\\train.txt"
-    # file2 = "FB15k\\entity2id.txt"
-    # file3 = "FB15k\\relation2id.txt"
-
-    file1 = "WN18\\wordnet-mlj12-train.txt"
-    file2 = "WN18\\entity2id.txt"
-    file3 = "WN18\\relation2id.txt"
-    entity_set, relation_set, triple_list = load_files(file1, file2, file3)
-
-    transE = TransE(entity_set, relation_set, triple_list, embedding_dim=50, lr=0.01, margin=1.0, norm=2)
-    transE.data_initialise()
-    transE.training_run(out_file_title="WN18_")
+if __name__ == "__main__":
+    main("word_net")
