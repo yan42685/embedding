@@ -14,7 +14,7 @@ def main(data_set_name):
     elif data_set_name == "word_net":
         entity_file = "data_set/WN18/entity2id.txt"
         relation_file = "data_set/WN18/relation2id.txt"
-        # 训练耗时：test集13秒，train集100秒
+        # 训练耗时：test集11秒，train集26秒
         fact_file = "data_set/WN18/wordnet-mlj12-test.txt"
     else:
         raise RuntimeError("Wrong data set name")
@@ -27,46 +27,37 @@ def main(data_set_name):
 def load_data(entity_file, relation_file, fact_file):
     print("loading files...")
 
-    entity_id_dict = {}
-    relation_id_dict = {}
-    entity_ids = []
-    relation_ids = []
-    with open(entity_file, "r") as file1, open(relation_file, "r") as file2:
+    entities = []
+    relations = []
+    facts = []
+
+    with codecs.open(entity_file, "r") as file1, codecs.open(relation_file, "r") as file2, codecs.open(fact_file,
+                                                                                                       "r") as file3:
         lines1 = file1.readlines()
-        lines2 = file2.readlines()
         for line in lines1:
             line = line.strip().split("\t")
             if len(line) != 2:
                 continue
-            entity_id_dict[line[0]] = line[1]
-            entity_ids.append(line[1])
+            entities.append(line[0])
 
+        lines2 = file2.readlines()
         for line in lines2:
             line = line.strip().split("\t")
             if len(line) != 2:
                 continue
-            relation_id_dict[line[0]] = line[1]
-            relation_ids.append(line[1])
+            relations.append(line[0])
 
-    facts = []
-
-    with codecs.open(fact_file, "r") as file3:
         lines3 = file3.readlines()
         for line in lines3:
             fact = line.strip().split("\t")
             if len(fact) != 3:
                 continue
-
-            head_id = entity_id_dict[fact[0]]
-            relation_id = relation_id_dict[fact[1]]
-            tail_id = entity_id_dict[fact[2]]
-
-            facts.append([head_id, relation_id, tail_id])
+            facts.append(fact)
 
     print("Loading complete. entity : %d , relation : %d , fact : %d" % (
-        len(entity_ids), len(relation_ids), len(facts)))
+        len(entities), len(relations), len(facts)))
 
-    return entity_ids, relation_ids, facts
+    return entities, relations, facts
 
 
 # 曼哈顿距离
