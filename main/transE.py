@@ -14,7 +14,6 @@ def main(data_set_name):
     elif data_set_name == "word_net":
         entity_file = "data_set/WN18/entity2id.txt"
         relation_file = "data_set/WN18/relation2id.txt"
-        # 训练耗时：test集11秒，train集26秒
         fact_file = "data_set/WN18/wordnet-mlj12-test.txt"
     else:
         raise RuntimeError("Wrong data set name")
@@ -105,7 +104,6 @@ class TransE:
             self.relation_vector_dict[relation] = relation_vector
 
     def train(self, epoch_count=1, batch_count=100, data_set_name=""):
-
         batch_size = int(len(self.facts) / batch_count)
         print("batch size: ", batch_size)
         for epoch in range(epoch_count):
@@ -125,9 +123,26 @@ class TransE:
 
         self._output_result(data_set_name, batch_size)
 
+    def _generate_pos_neg_batch(self, batch_size):
+        positive_batch = random.sample(self.facts, batch_size)
+        negative_batch = []
+
+        # 随机替换正例头实体或尾实体, 得到对应的负例
+        for (head, relation, tail) in positive_batch:
+            random_choice = np.random.random()
+            while True:
+                if random_choice <= 0.5:
+                    head = random.choice(self.entities)
+                else:
+                    tail = random.choice(self.entities)
+                # 不确定会不会导致死循环
+                if (head, relation, tail) not in self.entities_set:
+                    break
+            negative_batch.append((head, relation, tail))
+
+        return positive_batch, negative_batch
+
     def _update_embedding(self, positive_samples, negative_samples):
-        # deepcopy 可以保证，即使list嵌套list也能让各层的地址不同， 即这里copy_entity_vector_dict 和
-        # entity_vector_dict中所有的元素都不同
         copy_entity_vector_dict = copy.deepcopy(self.entity_vector_dict)
         copy_relation_vector_dict = copy.deepcopy(self.relation_vector_dict)
 
@@ -204,25 +219,6 @@ class TransE:
 
         self.entity_vector_dict = copy_entity_vector_dict
         self.relation_vector_dict = copy_relation_vector_dict
-
-    def _generate_pos_neg_batch(self, batch_size):
-        positive_batch = random.sample(self.facts, batch_size)
-        negative_batch = []
-
-        # 随机替换正例头实体或尾实体, 得到对应的负例
-        for (head, relation, tail) in positive_batch:
-            random_choice = np.random.random()
-            while True:
-                if random_choice <= 0.5:
-                    head = random.choice(self.entities)
-                else:
-                    tail = random.choice(self.entities)
-                # 不确定会不会导致死循环
-                if (head, relation, tail) not in self.entities_set:
-                    break
-            negative_batch.append((head, relation, tail))
-
-        return positive_batch, negative_batch
 
     def _output_result(self, data_set_name, batch_size):
         data_set_name = data_set_name + "_"
