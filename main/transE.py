@@ -70,7 +70,7 @@ def norm_l2(vector):
     return np.linalg.norm(vector, ord=2)
 
 
-# 缩小到欧氏距离的单位长度
+# 缩放到欧氏距离的单位长度
 def scale_to_unit_length(vector):
     return vector / norm_l2(vector)
 
@@ -78,6 +78,7 @@ def scale_to_unit_length(vector):
 class TransE:
     def __init__(self, entities, relations, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=1):
         self.entities = entities
+        self.entities_set = set(entities)
         self.relations = relations
         self.entity_vector_dict = {}
         self.relation_vector_dict = {}
@@ -114,29 +115,8 @@ class TransE:
                 self.entity_vector_dict[entity] = scale_to_unit_length(self.entity_vector_dict[entity])
 
             for batch in range(batch_count):
-                positive_samples = random.sample(self.facts, batch_size)
-
-                sample_pairs = []
-                # 根据正例构建负例
-                for positive_sample in positive_samples:
-                    negative_sample = copy.deepcopy(positive_sample)
-                    # 随机替换正例头实体或尾实体, 得到对应的负例
-                    random_choice = np.random.random(1)[0]
-                    if random_choice > 0.5:
-                        # 替换正例的头实体
-                        negative_sample[0] = random.sample(self.entities, 1)[0]
-                        while negative_sample[0] == positive_sample[0]:
-                            negative_sample[0] = random.sample(self.entities, 1)[0]
-                    else:
-                        # 替换正例的尾实体
-                        negative_sample[2] = random.sample(self.entities, 1)[0]
-                        while negative_sample[2] == positive_sample[2]:
-                            negative_sample[2] = random.sample(self.entities, 1)[0]
-
-                    if (positive_sample, negative_sample) not in sample_pairs:
-                        sample_pairs.append((positive_sample, negative_sample))
-
-                self._update_embedding(sample_pairs)
+                positive_batch, negative_batch = self._generate_pos_neg_batch(batch_size)
+                self._update_embedding(positive_batch, negative_batch)
             # 让学习率衰减
             self.learning_rate = pow(0.95, epoch + 1) * self.learning_rate
             end_time = time.time()
@@ -145,84 +125,104 @@ class TransE:
 
         self._output_result(data_set_name, batch_size)
 
-    def _update_embedding(self, Tbatch):
+    def _update_embedding(self, positive_samples, negative_samples):
         # deepcopy 可以保证，即使list嵌套list也能让各层的地址不同， 即这里copy_entity_vector_dict 和
         # entity_vector_dict中所有的元素都不同
         copy_entity_vector_dict = copy.deepcopy(self.entity_vector_dict)
         copy_relation_vector_dict = copy.deepcopy(self.relation_vector_dict)
 
-        for positive_sample, negative_sample in Tbatch:
+        for positive_sample in positive_samples:
+            for negative_sample in negative_samples:
 
-            positive_head = self.entity_vector_dict[positive_sample[0]]
-            positive_tail = self.entity_vector_dict[positive_sample[2]]
-            relation = self.relation_vector_dict[positive_sample[1]]
+                positive_head = self.entity_vector_dict[positive_sample[0]]
+                positive_tail = self.entity_vector_dict[positive_sample[2]]
+                relation = self.relation_vector_dict[positive_sample[1]]
 
-            negative_head = self.entity_vector_dict[negative_sample[0]]
-            negative_tail = self.entity_vector_dict[negative_sample[2]]
+                negative_head = self.entity_vector_dict[negative_sample[0]]
+                negative_tail = self.entity_vector_dict[negative_sample[2]]
 
-            # 计算向量之间的距离
-            if self.norm == 1:
-                positive_distance = norm_l1(positive_head + relation - positive_tail)
-                negative_distance = norm_l1(negative_head + relation - negative_tail)
-
-            else:
-                positive_distance = norm_l2(positive_head + relation - positive_tail)
-                negative_distance = norm_l2(negative_head + relation - negative_tail)
-
-            loss = self.margin + positive_distance - negative_distance
-            if loss > 0:
-                self.loss += loss
-
-                # 默认是L2范式
-                positive_gradient = 2 * (positive_head + relation - positive_tail)
-                negative_gradient = 2 * (negative_head + relation - negative_tail)
-
-                # 如果是L1范式再改变梯度的具体值
+                # 计算向量之间的距离
                 if self.norm == 1:
-                    for i in range(len(positive_gradient)):
-                        if positive_gradient[i] > 0:
-                            positive_gradient[i] = 1
-                        else:
-                            positive_gradient[i] = -1
+                    positive_distance = norm_l1(positive_head + relation - positive_tail)
+                    negative_distance = norm_l1(negative_head + relation - negative_tail)
 
-                        if negative_gradient[i] > 0:
-                            negative_gradient[i] = 1
-                        else:
-                            negative_gradient[i] = -1
+                else:
+                    positive_distance = norm_l2(positive_head + relation - positive_tail)
+                    negative_distance = norm_l2(negative_head + relation - negative_tail)
 
-                # 损失函数希望达到的理想情况是，正例的d(h + r, t) 尽可能小，负例的d(h' + r', t') 尽可能大，
-                # 这样才能让总体的loss趋向于0。因此在梯度下降过程中，
-                # 正例中h和r逐渐减小，但t逐渐增大； 负例中h'和r'逐渐增大，而t'逐渐减小
-                positive_head -= self.learning_rate * positive_gradient
-                positive_tail += self.learning_rate * positive_gradient
+                loss = self.margin + positive_distance - negative_distance
+                if loss > 0:
+                    self.loss += loss
 
-                # 如果负例替换的是头实体, 则正例的尾实体更新两次, 一次满足正例，一次满足负例
-                if positive_sample[0] != negative_sample[0]:
-                    negative_head += self.learning_rate * negative_gradient
-                    positive_tail -= self.learning_rate * negative_gradient
-                # 如果负例替换的是尾实体, 则正例的头实体更新两次
-                elif positive_sample[2] != negative_sample[2]:
-                    negative_tail -= self.learning_rate * negative_gradient
-                    positive_head += self.learning_rate * negative_gradient
+                    # 默认是L2范式
+                    positive_gradient = 2 * (positive_head + relation - positive_tail)
+                    negative_gradient = 2 * (negative_head + relation - negative_tail)
 
-                # 关系永远更新两次
-                relation -= self.learning_rate * positive_gradient
-                relation += self.learning_rate * negative_gradient
+                    # 如果是L1范式再改变梯度的具体值
+                    if self.norm == 1:
+                        for i in range(len(positive_gradient)):
+                            if positive_gradient[i] > 0:
+                                positive_gradient[i] = 1
+                            else:
+                                positive_gradient[i] = -1
 
-                # 将正例头尾实体新的向量表示放缩到单位长度, 并替换原来的向量表示
-                copy_entity_vector_dict[positive_sample[0]] = scale_to_unit_length(positive_head)
-                copy_entity_vector_dict[positive_sample[2]] = scale_to_unit_length(positive_tail)
-                # 将负例中被替换的头实体或尾实体的新向量表示放缩到单位长度, 并替换原来的向量表示
-                if positive_sample[0] != negative_sample[0]:
-                    copy_entity_vector_dict[negative_sample[0]] = scale_to_unit_length(negative_head)
-                elif positive_sample[2] != negative_sample[2]:
-                    copy_entity_vector_dict[negative_sample[2]] = scale_to_unit_length(negative_tail)
+                            if negative_gradient[i] > 0:
+                                negative_gradient[i] = 1
+                            else:
+                                negative_gradient[i] = -1
 
-                # TransE论文提到关系的向量表示不用缩放到单位长度
-                copy_relation_vector_dict[positive_sample[1]] = relation
+                    # 损失函数希望达到的理想情况是，正例的d(h + r, t) 尽可能小，负例的d(h' + r', t') 尽可能大，
+                    # 这样才能让总体的loss趋向于0。因此在梯度下降过程中，
+                    # 正例中h和r逐渐减小，但t逐渐增大； 负例中h'和r'逐渐增大，而t'逐渐减小
+                    positive_head -= self.learning_rate * positive_gradient
+                    positive_tail += self.learning_rate * positive_gradient
+
+                    # 如果负例替换的是头实体, 则正例的尾实体更新两次, 一次满足正例，一次满足负例
+                    if positive_sample[0] != negative_sample[0]:
+                        negative_head += self.learning_rate * negative_gradient
+                        positive_tail -= self.learning_rate * negative_gradient
+                    # 如果负例替换的是尾实体, 则正例的头实体更新两次
+                    elif positive_sample[2] != negative_sample[2]:
+                        negative_tail -= self.learning_rate * negative_gradient
+                        positive_head += self.learning_rate * negative_gradient
+
+                    # 关系永远更新两次
+                    relation -= self.learning_rate * positive_gradient
+                    relation += self.learning_rate * negative_gradient
+
+                    # 将正例头尾实体新的向量表示放缩到单位长度, 并替换原来的向量表示
+                    copy_entity_vector_dict[positive_sample[0]] = scale_to_unit_length(positive_head)
+                    copy_entity_vector_dict[positive_sample[2]] = scale_to_unit_length(positive_tail)
+                    # 将负例中被替换的头实体或尾实体的新向量表示放缩到单位长度, 并替换原来的向量表示
+                    if positive_sample[0] != negative_sample[0]:
+                        copy_entity_vector_dict[negative_sample[0]] = scale_to_unit_length(negative_head)
+                    elif positive_sample[2] != negative_sample[2]:
+                        copy_entity_vector_dict[negative_sample[2]] = scale_to_unit_length(negative_tail)
+
+                    # TransE论文提到关系的向量表示不用缩放到单位长度
+                    copy_relation_vector_dict[positive_sample[1]] = relation
 
         self.entity_vector_dict = copy_entity_vector_dict
         self.relation_vector_dict = copy_relation_vector_dict
+
+    def _generate_pos_neg_batch(self, batch_size):
+        positive_batch = random.sample(self.facts, batch_size)
+        negative_batch = []
+
+        # 随机替换正例头实体或尾实体, 得到对应的负例
+        for (head, relation, tail) in positive_batch:
+            random_choice = np.random.random()
+            while True:
+                if random_choice <= 0.5:
+                    head = random.choice(self.entities)
+                else:
+                    tail = random.choice(self.entities)
+                # 不确定会不会导致死循环
+                if (head, relation, tail) not in self.entities_set:
+                    break
+            negative_batch.append((head, relation, tail))
+
+        return positive_batch, negative_batch
 
     def _output_result(self, data_set_name, batch_size):
         data_set_name = data_set_name + "_"
