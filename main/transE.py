@@ -20,7 +20,7 @@ def main(data_set_name):
     entity_ids, relation_ids, facts = load_data(entity_file, relation_file, fact_file)
 
     model = TransE(entity_ids, relation_ids, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=2)
-    model.train(epoch_count=1, data_set_name=data_set_name)
+    model.train(epoch_count=5, data_set_name=data_set_name)
 
 
 def load_data(entity_file, relation_file, fact_file):
@@ -106,8 +106,8 @@ class TransE:
             # relation_vector = norm_l2(relation_vector)
             self.relation_vector_dict[relation] = relation_vector
 
-    def train(self, epoch_count=1, batch_count=100, data_set_name=""):
-        batch_size = int(len(self.facts) / batch_count)
+    def train(self, epoch_count=1, batch_size=50, data_set_name=""):
+        batch_count = int(len(self.facts) / batch_size)
         print("batch size: ", batch_size)
         for epoch in range(epoch_count):
             start_time = time.time()
@@ -151,10 +151,10 @@ class TransE:
     def _update_embedding(self, positive_samples, negative_samples):
         copy_entity_vector_dict = copy.copy(self.entity_vector_dict)
         copy_relation_vector_dict = copy.copy(self.relation_vector_dict)
+        self.total_sample_count += len(positive_samples) * len(negative_samples)
 
         for positive_sample in positive_samples:
             for negative_sample in negative_samples:
-                self.total_sample_count += 1
 
                 positive_head = self.entity_vector_dict[positive_sample[0]]
                 positive_tail = self.entity_vector_dict[positive_sample[2]]
