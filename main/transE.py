@@ -143,8 +143,8 @@ class TransE:
         return positive_batch, negative_batch
 
     def _update_embedding(self, positive_samples, negative_samples):
-        copy_entity_vector_dict = copy.deepcopy(self.entity_vector_dict)
-        copy_relation_vector_dict = copy.deepcopy(self.relation_vector_dict)
+        copy_entity_vector_dict = copy.copy(self.entity_vector_dict)
+        copy_relation_vector_dict = copy.copy(self.relation_vector_dict)
 
         for positive_sample in positive_samples:
             for negative_sample in negative_samples:
