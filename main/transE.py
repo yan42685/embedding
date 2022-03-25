@@ -59,6 +59,11 @@ def load_data(entity_file, relation_file, fact_file):
     return entities, relations, facts
 
 
+def generate_initial_vector(dimension):
+    return np.random.uniform(-6.0 / np.sqrt(dimension), 6.0 / np.sqrt(dimension),
+                             dimension)
+
+
 # 曼哈顿距离
 def norm_l1(vector):
     return np.linalg.norm(vector, ord=1)
@@ -86,19 +91,17 @@ class TransE:
         self.learning_rate = learning_rate
         self.margin = margin
         self.norm = norm
-        self.loss = 0.0
+        self.total_loss = 0.0
+        # 总的样本数，用于计算平均loss
+        self.total_sample_count = 0
         self._vector_init()
 
     def _vector_init(self):
         for entity in self.entities:
-            entity_vector = np.random.uniform(-6.0 / np.sqrt(self.dimension), 6.0 / np.sqrt(self.dimension),
-                                              self.dimension)
-            self.entity_vector_dict[entity] = entity_vector
+            self.entity_vector_dict[entity] = generate_initial_vector(self.dimension)
 
         for relation in self.relations:
-            relation_vector = np.random.uniform(-6.0 / np.sqrt(self.dimension), 6.0 / np.sqrt(self.dimension),
-                                                self.dimension)
-            relation_vector = scale_to_unit_length(relation_vector)
+            relation_vector = scale_to_unit_length(generate_initial_vector(self.dimension))
             # 不知道为什么，换成下面这行代码反而lose降低了10%左右
             # relation_vector = norm_l2(relation_vector)
             self.relation_vector_dict[relation] = relation_vector
@@ -108,7 +111,8 @@ class TransE:
         print("batch size: ", batch_size)
         for epoch in range(epoch_count):
             start_time = time.time()
-            self.loss = 0.0
+            self.total_loss = 0.0
+            self.total_sample_count = 0
             for entity in self.entity_vector_dict.keys():
                 self.entity_vector_dict[entity] = scale_to_unit_length(self.entity_vector_dict[entity])
 
@@ -119,7 +123,9 @@ class TransE:
             self.learning_rate = pow(0.95, epoch + 1) * self.learning_rate
             end_time = time.time()
             print("epoch: ", epoch + 1, "cost time: %s" % (round((end_time - start_time), 3)))
-            print("total loss: ", self.loss)
+            print("total loss: %.6f" % self.total_loss)
+            print("average loss: %.6f" % (self.total_loss / self.total_sample_count))
+            print()
 
         self._output_result(data_set_name, batch_size)
 
@@ -148,6 +154,7 @@ class TransE:
 
         for positive_sample in positive_samples:
             for negative_sample in negative_samples:
+                self.total_sample_count += 1
 
                 positive_head = self.entity_vector_dict[positive_sample[0]]
                 positive_tail = self.entity_vector_dict[positive_sample[2]]
@@ -167,7 +174,7 @@ class TransE:
 
                 loss = self.margin + positive_distance - negative_distance
                 if loss > 0:
-                    self.loss += loss
+                    self.total_loss += loss
 
                     # 默认是L2范式
                     positive_gradient = 2 * (positive_head + relation - positive_tail)
