@@ -119,7 +119,7 @@ class TransE:
             self.learning_rate = pow(0.95, epoch + 1) * self.learning_rate
             end_time = time.time()
             print("epoch: ", epoch + 1, "cost time: %s" % (round((end_time - start_time), 3)))
-            print("running loss: ", self.loss)
+            print("total loss: ", self.loss)
 
         self._output_result(data_set_name, batch_size)
 
@@ -127,7 +127,7 @@ class TransE:
         positive_batch = random.sample(self.facts, batch_size)
         negative_batch = []
 
-        # 随机替换正例头实体或尾实体, 得到对应的负例
+        # 随机替换正例头实体或尾实体, 得到对应的一个负例
         for (head, relation, tail) in positive_batch:
             random_choice = np.random.random()
             while True:
@@ -135,7 +135,7 @@ class TransE:
                     head = random.choice(self.entities)
                 else:
                     tail = random.choice(self.entities)
-                # 不确定会不会导致死循环
+                # 确保负例不在原facts中
                 if (head, relation, tail) not in self.entities_set:
                     break
             negative_batch.append((head, relation, tail))
