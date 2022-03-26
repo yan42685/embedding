@@ -24,7 +24,7 @@ class BaseModel(metaclass=ABCMeta):
         self.total_sample_count = 0
 
     def train(self, epoch_count=1, batch_size=50, data_set_name=""):
-        self._embedding_init()
+        self._init_embeddings()
         batch_count = int(len(self.facts) / batch_size)
         print("batch size: ", batch_size)
         for epoch in range(epoch_count):
@@ -36,7 +36,7 @@ class BaseModel(metaclass=ABCMeta):
 
             for batch in range(batch_count):
                 positive_batch, negative_batch = self._generate_pos_neg_batch(batch_size)
-                self._update_embedding(positive_batch, negative_batch)
+                self._update_embeddings(positive_batch, negative_batch)
             # 让学习率衰减
             self.learning_rate = pow(0.95, epoch + 1) * self.learning_rate
             end_time = time.time()
@@ -47,7 +47,7 @@ class BaseModel(metaclass=ABCMeta):
 
         # self._output_result(data_set_name, batch_size)
 
-    def _embedding_init(self):
+    def _init_embeddings(self):
         for entity in self.entities:
             self.entity_vector_dict[entity] = generate_initial_vector(self.dimension)
 
@@ -77,7 +77,7 @@ class BaseModel(metaclass=ABCMeta):
         return positive_batch, negative_batch
 
     @abstractmethod
-    def _update_embedding(self, positive_samples, negative_samples):
+    def _update_embeddings(self, positive_samples, negative_samples):
         pass
 
     # def _output_result(self, data_set_name, batch_size):

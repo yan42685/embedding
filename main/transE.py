@@ -4,7 +4,7 @@ from tools import norm_l1, norm_l2, scale_to_unit_length
 
 
 class TransE(BaseModel):
-    def _update_embedding(self, positive_samples, negative_samples):
+    def _update_embeddings(self, positive_samples, negative_samples):
         copy_entity_vector_dict = copy.copy(self.entity_vector_dict)
         copy_relation_vector_dict = copy.copy(self.relation_vector_dict)
         self.total_sample_count += len(positive_samples) * len(negative_samples)
