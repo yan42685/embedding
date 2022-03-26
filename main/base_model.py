@@ -40,7 +40,7 @@ class BaseModel(metaclass=ABCMeta):
             # 让学习率衰减
             self.learning_rate = pow(0.95, epoch + 1) * self.learning_rate
             end_time = time.time()
-            print("epoch: ", epoch + 1, "cost time: %s" % (round((end_time - start_time), 3)))
+            print("epoch: ", epoch + 1, "cost time: %.3fs" % (end_time - start_time))
             print("total loss: %.6f" % self.total_loss)
             print("average loss: %.6f" % (self.total_loss / self.total_sample_count))
             print()
@@ -53,8 +53,6 @@ class BaseModel(metaclass=ABCMeta):
 
         for relation in self.relations:
             relation_vector = scale_to_unit_length(generate_initial_vector(self.dimension))
-            # 不知道为什么，换成下面这行代码反而lose降低了10%左右
-            # relation_vector = norm_l2(relation_vector)
             self.relation_vector_dict[relation] = relation_vector
 
     def _generate_pos_neg_batch(self, batch_size):
