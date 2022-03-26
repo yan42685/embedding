@@ -60,7 +60,7 @@ def scale_to_unit_length(vector):
 
 
 # 统计代码耗时的装饰器
-def time_counter(func):
+def time_it(func):
     def func_wrapper(*args, **kwargs):
         start_time = time.perf_counter()
         result = func(*args, **kwargs)
