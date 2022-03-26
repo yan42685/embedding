@@ -15,8 +15,8 @@ def main(data_set_name):
         raise RuntimeError("Wrong data set name")
     entities, relations, facts = load_data(entity_file, relation_file, fact_file)
 
-    model = TransE(entities, relations, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=2)
-    model.train(epoch_count=5, data_set_name=data_set_name)
+    model = TransE(entities, relations, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=1)
+    model.train(epoch_count=3, data_set_name=data_set_name)
 
 
 if __name__ == "__main__":

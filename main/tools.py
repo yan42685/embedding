@@ -1,5 +1,6 @@
-import codecs
 import numpy as np
+import codecs
+import time
 
 
 def load_data(entity_file, relation_file, fact_file):
@@ -56,3 +57,15 @@ def norm_l2(vector):
 # 缩放到欧氏距离的单位长度
 def scale_to_unit_length(vector):
     return vector / norm_l2(vector)
+
+
+# 统计代码耗时的装饰器
+def time_counter(func):
+    def func_wrapper(*args, **kwargs):
+        start_time = time.perf_counter()
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
+        print(f'function [{func.__name__}] costs time: {end_time - start_time:.6f}s')
+        return result
+
+    return func_wrapper
