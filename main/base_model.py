@@ -40,7 +40,7 @@ class BaseModel(metaclass=ABCMeta):
             # 让学习率衰减
             self.learning_rate = pow(0.95, epoch + 1) * self.learning_rate
             end_time = time.time()
-            print("epoch: ", epoch + 1, "cost time: %.3fs" % (end_time - start_time))
+            print("epoch: ", epoch + 1, "  cost time: %.3fs" % (end_time - start_time))
             print("total loss: %.6f" % self.total_loss)
             print("average loss: %.6f" % (self.total_loss / self.total_sample_count))
             print()

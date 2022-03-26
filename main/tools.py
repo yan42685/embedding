@@ -32,7 +32,7 @@ def load_data(entity_file, relation_file, fact_file):
                 continue
             facts.append(fact)
 
-    print("Loading complete. entity : %d , relation : %d , fact : %d" % (
+    print("Loading complete. entity: %d , relation: %d , fact: %d" % (
         len(entities), len(relations), len(facts)))
 
     return entities, relations, facts
