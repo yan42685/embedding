@@ -22,19 +22,9 @@ class BaseModel(metaclass=ABCMeta):
         self.total_loss = 0.0
         # 总的样本数，用于计算平均loss
         self.total_sample_count = 0
-        self._vector_init()
-
-    def _vector_init(self):
-        for entity in self.entities:
-            self.entity_vector_dict[entity] = generate_initial_vector(self.dimension)
-
-        for relation in self.relations:
-            relation_vector = scale_to_unit_length(generate_initial_vector(self.dimension))
-            # 不知道为什么，换成下面这行代码反而lose降低了10%左右
-            # relation_vector = norm_l2(relation_vector)
-            self.relation_vector_dict[relation] = relation_vector
 
     def train(self, epoch_count=1, batch_size=50, data_set_name=""):
+        self._embedding_init()
         batch_count = int(len(self.facts) / batch_size)
         print("batch size: ", batch_size)
         for epoch in range(epoch_count):
@@ -56,6 +46,16 @@ class BaseModel(metaclass=ABCMeta):
             print()
 
         # self._output_result(data_set_name, batch_size)
+
+    def _embedding_init(self):
+        for entity in self.entities:
+            self.entity_vector_dict[entity] = generate_initial_vector(self.dimension)
+
+        for relation in self.relations:
+            relation_vector = scale_to_unit_length(generate_initial_vector(self.dimension))
+            # 不知道为什么，换成下面这行代码反而lose降低了10%左右
+            # relation_vector = norm_l2(relation_vector)
+            self.relation_vector_dict[relation] = relation_vector
 
     def _generate_pos_neg_batch(self, batch_size):
         positive_batch = random.sample(self.facts, batch_size)
