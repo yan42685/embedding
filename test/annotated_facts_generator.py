@@ -28,13 +28,13 @@ class AnnotatedFactsGenerator:
     @time_it
     def _extract_quads(self, input_path):
         with codecs.open(input_path, encoding=self.CHARSET) as file:
-            text = file.readlines()
+            lines = file.readlines()
         elements_pattern = re.compile(r'(?<=<)[^<>]+(?=>)')
         date_pattern = re.compile(r'(?<=")\d{4}.*(?=")')
         quads = []
         initial_count = 0
         final_count = 0
-        for line in text:
+        for line in lines:
             initial_count += 1
             elements = elements_pattern.findall(line)
             if len(elements) == 5 and elements[3].endswith("startDate"):
