@@ -1,8 +1,9 @@
 from rdflib import Graph
-from tools import time_it,exec_pipeline
+from tools import time_it, exec_pipeline
 import codecs
 import pandas as pd
 from pathlib import Path
+
 import collections
 import re
 
@@ -13,17 +14,17 @@ def main():
 
 
 class AnnotatedFactsGenerator:
+    OUTPUT_PATH = Path.cwd().parent.joinpath("main/target/yago4_annotated_quads.txt")
+
     def __init__(self):
         self.CHARSET = "utf-8"
         # 过滤出在头实体位置出现次数 >= threshold的实体所在在的四元组
         self.FILTER_THRESHOLD = 10
-        self.input_path = Path.cwd().parent.joinpath("main/target/yago4-wd-annotated-facts.ntx")
-
-        self.output_path = Path.cwd().parent.joinpath("main/target/yago4_annotated_quads.txt")
+        self.INPUT_PATH = Path.cwd().parent.joinpath("main/target/yago4-wd-annotated-facts.ntx")
 
     @time_it
     def run(self):
-        exec_pipeline(self.input_path, self._extract_quads, self._filter_quads, self._output_quads)
+        exec_pipeline(self.INPUT_PATH, self._extract_quads, self._filter_quads, self._output_quads)
 
     @time_it
     def _extract_quads(self, input_path):
@@ -64,8 +65,7 @@ class AnnotatedFactsGenerator:
 
     @time_it
     def _output_quads(self, quads):
-        output_path = self.output_path
-        with codecs.open(output_path, "w", encoding=self.CHARSET) as output_file:
+        with codecs.open(self.OUTPUT_PATH, "w", encoding=self.CHARSET) as output_file:
             for quad in quads:
                 new_line = "\t".join(quad)
                 output_file.write(new_line + "\n")
