@@ -1,5 +1,5 @@
 from rdflib import Graph
-from tools import time_it
+from tools import time_it,exec_pipeline
 import codecs
 import pandas as pd
 from pathlib import Path
@@ -23,13 +23,11 @@ class AnnotatedFactsGenerator:
 
     @time_it
     def run(self):
-        extracted_quads = self._extract_quads()
-        filtered_quads = self._filter_quads(extracted_quads)
-        self._output_quads(filtered_quads)
+        exec_pipeline(self.input_path, self._extract_quads, self._filter_quads, self._output_quads)
 
     @time_it
-    def _extract_quads(self):
-        with codecs.open(self.input_path, encoding=self.CHARSET) as file:
+    def _extract_quads(self, input_path):
+        with codecs.open(input_path, encoding=self.CHARSET) as file:
             text = file.readlines()
         elements_pattern = re.compile(r'(?<=<)[^<>]+(?=>)')
         date_pattern = re.compile(r'(?<=")\d{4}.*(?=")')

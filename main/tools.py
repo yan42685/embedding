@@ -72,3 +72,16 @@ def time_it(func):
     return func_wrapper
 
 
+def exec_pipeline(input_param, *functions):
+    """
+    按顺序执行只有一个参数的函数序列，前一个函数的结果作为后一个函数的参数
+    """
+    counter = 0
+    result = None
+    for function in functions:
+        counter += 1
+        if counter == 1:
+            result = function(input_param)
+        else:
+            result = function(result)
+    return result
