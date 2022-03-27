@@ -8,15 +8,15 @@ import re
 
 
 def main():
-    generator = SubDataSetGenerator(is_test=False)
+    generator = AnnotatedFactsGenerator()
     generator.run()
 
 
-class SubDataSetGenerator:
-    def __init__(self, is_test=True):
-        self.is_test = is_test
+class AnnotatedFactsGenerator:
+    def __init__(self):
         self.charset = "utf-8"
         self.yago4_annotated_facts_path = Path.cwd().parent.joinpath("main/target/yago4-wd-annotated-facts.ntx")
+        self.yago4_facts_path = Path.cwd().parent.joinpath("main/target/yago4-wd-facts.ntx")
 
         self.test_annotated_quads_path = Path.cwd().parent.joinpath("main/target/test_annotated_quads.txt")
         self.yago4_annotated_quads_path = Path.cwd().parent.joinpath("main/target/yago4_annotated_quads.txt")
@@ -24,22 +24,11 @@ class SubDataSetGenerator:
 
     @time_it
     def run(self):
-        if self.is_test:
-            text = self._sample_text(20000)
-        else:
-            with codecs.open(self.yago4_annotated_facts_path, encoding=self.charset) as file:
-                text = file.readlines()
+        with codecs.open(self.yago4_annotated_facts_path, encoding=self.charset) as file:
+            text = file.readlines()
         extracted_quads = self._extract_quads(text)
         filtered_quads = self._filter_quads(extracted_quads, 10)
         self._output_quads(filtered_quads)
-
-    @time_it
-    def _sample_text(self, lines):
-        sample_text = []
-        with codecs.open(self.yago4_annotated_facts_path, "r", encoding=self.charset) as source_file:
-            for i in range(lines):
-                sample_text.append(source_file.readline())
-        return sample_text
 
     @time_it
     def _extract_quads(self, text):
@@ -82,7 +71,7 @@ class SubDataSetGenerator:
 
     @time_it
     def _output_quads(self, quads):
-        output_path = self.test_annotated_quads_path if self.is_test else self.yago4_annotated_quads_path
+        output_path = self.yago4_annotated_quads_path
         with codecs.open(output_path, "w", encoding=self.charset) as output_file:
             for quad in quads:
                 new_line = "\t".join(quad)
