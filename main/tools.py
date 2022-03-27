@@ -1,6 +1,7 @@
 import numpy as np
 import codecs
 import time
+from os.path import dirname, abspath
 
 
 def load_data(entity_file, relation_file, fact_file):
@@ -69,3 +70,7 @@ def time_it(func):
         return result
 
     return func_wrapper
+
+
+
+
