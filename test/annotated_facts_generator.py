@@ -1,7 +1,5 @@
-from rdflib import Graph
 from tools import time_it, exec_pipeline
 import codecs
-import pandas as pd
 from pathlib import Path
 
 import collections
@@ -64,7 +62,6 @@ class AnnotatedFactsGenerator:
         filtered_quads = list(filter(lambda quad: quad[0] in entity_set, quads))
         print("filtered quad: %d" % len(filtered_quads))
         return filtered_quads
-
 
     @time_it
     def _output_quads(self, quads):
