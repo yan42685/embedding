@@ -37,9 +37,9 @@ class TfModel(metaclass=ABCMeta):
 
     def init_embedding(self):
         bound = 6 / pow(self.embedding_dim, 0.5)
-        self.entities_embedding = tf.Variable(shape=[len(self.train_data.entities), self.embedding_dim],
+        self.entities_embedding = tf.Variable(shape=[self.train_data.entity_count, self.embedding_dim],
                                               initializer=tf.random_uniform_initializer(minval=-bound, maxval=bound))
-        self.relations_embedding = tf.Variable(shape=[len(self.train_data.relations), self.embedding_dim],
+        self.relations_embedding = tf.Variable(shape=[self.train_data.relation_count, self.embedding_dim],
                                                initializer=tf.random_uniform_initializer(minval=-bound, maxval=bound))
 
         self.entities_embedding = tf.math.l2_normalize(self.entities_embedding, axis=1)
