@@ -67,22 +67,22 @@ class SubDataSetGenerator:
         entity_dict = collections.defaultdict(int)
         entity_set = set()
         # 过滤出在头实体位置出现次数 >= threshold的实体所在在的四元组
-        for (a, b, c, d) in quads:
-            entity_dict[a] += 1
-            entity_dict[c] += 1
-            if entity_dict[a] >= self.filter_threshold:
-                entity_set.add(a)
-            if entity_dict[c] >= self.filter_threshold:
-                entity_set.add(c)
+        for (h, r, t, d) in quads:
+            entity_dict[h] += 1
+            entity_dict[t] += 1
+            if entity_dict[h] >= self.filter_threshold:
+                entity_set.add(h)
+            if entity_dict[t] >= self.filter_threshold:
+                entity_set.add(t)
 
         filtered_quads = list(filter(lambda quad: quad[0] in entity_set, quads))
         self.all_quads = filtered_quads
         print("filtered quad: %d" % len(filtered_quads))
 
-        for (a, b, c, d) in filtered_quads:
-            self.entities.add(a)
-            self.entities.add(c)
-            self.relations.add(b)
+        for (h, r, t, d) in filtered_quads:
+            self.entities.add(h)
+            self.entities.add(t)
+            self.relations.add(r)
         print("filtered entities: %d" % len(self.entities))
         print("filtered relations: %d" % len(self.relations))
 
@@ -91,10 +91,10 @@ class SubDataSetGenerator:
         sampled_quads = random.sample(self.all_quads, sample_count)
         sampled_entities = set()
         sampled_relations = set()
-        for (a, b, c, d) in sampled_quads:
-            sampled_entities.add(a)
-            sampled_entities.add(c)
-            sampled_relations.add(b)
+        for (h, r, t, d) in sampled_quads:
+            sampled_entities.add(h)
+            sampled_entities.add(t)
+            sampled_relations.add(r)
         print("sampled entities: %d, total entities: %d" % (len(sampled_entities), len(self.entities)))
         print("sampled relations: %d, total relations: %d" % (len(sampled_relations), len(self.relations)))
         self.annotated_quads = sampled_quads
@@ -102,8 +102,8 @@ class SubDataSetGenerator:
         # 得到mixed_quads
         self.mixed_quads = list(self.annotated_quads)
         difference_set = set(self.all_quads).difference(self.annotated_quads)
-        for (a, b, c, d) in difference_set:
-            self.mixed_quads.append((a, b, c, "None"))
+        for (h, r, t, d) in difference_set:
+            self.mixed_quads.append((h, r, t, "None"))
 
         print("annotated quad: %d,   mixed quad:%d" % (len(self.annotated_quads), len(self.mixed_quads)))
         random.shuffle(self.mixed_quads)
