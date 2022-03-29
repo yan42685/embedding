@@ -1,4 +1,4 @@
-from base_model import BaseModel
+from raw_model.base_model import BaseModel
 import copy
 from tools import norm_l1, norm_l2, scale_to_unit_length
 

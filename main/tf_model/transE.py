@@ -1,4 +1,4 @@
-from model.base_model import BaseModel
+from tf_model.base_model import BaseModel
 import tensorflow as tf
 from tools import time_it
 

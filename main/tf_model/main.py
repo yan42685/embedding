@@ -1,9 +1,8 @@
-from model.transE import TransE
+from tf_model.transE import TransE
 import tensorflow as tf
 
 
 def main():
-    # 避免一些版本2的坑
     model = TransE()
     model.train()
 

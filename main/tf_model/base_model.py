@@ -1,4 +1,4 @@
-from model.KG import KG
+from tf_model.KG import KG
 from abc import ABCMeta, abstractmethod
 import time
 import tensorflow as tf
