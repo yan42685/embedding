@@ -30,10 +30,10 @@ class KG:
     @time_it
     def _load_kg(self):
         entities = self._pd_read(self._ENTITY_FILENAME)
-        self.entity_ids = np.arange(len(entities[0]))
+        self.entity_ids = list(np.arange(len(entities[0])))
         self.entity_id_dict = dict(zip(entities[0], self.entity_ids))
         relations = self._pd_read(self._RELATION_FILENAME)
-        self.relation_ids = np.arange(len(relations[0]))
+        self.relation_ids = list(np.arange(len(relations[0])))
         self.relation_id_dict = dict(zip(relations[0], self.relation_ids))
 
         train_quads = self._pd_read(self._TRAIN_FILENAME)

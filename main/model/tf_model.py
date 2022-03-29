@@ -4,6 +4,7 @@ import time
 import tensorflow as tf
 import numpy as np
 import random
+import math
 
 
 class TfModel(metaclass=ABCMeta):
@@ -19,6 +20,7 @@ class TfModel(metaclass=ABCMeta):
         self.learning_rate = learning_rate
         self.norm = norm
 
+        self.optimizer = None
         self.entities_embedding = None
         self.relations_embedding = None
         self.total_loss = 0.0
@@ -33,13 +35,16 @@ class TfModel(metaclass=ABCMeta):
             start_time = time.time()
             self.total_loss = 0.0
             self.total_sample_count = 0
+            # 让学习率衰减
+            self.learning_rate = pow(0.95, epoch) * self.learning_rate
+            self.optimizer = tf.keras.optimizers.SGD(learning_rate=self.learning_rate)
             # 只有entity需要在每个epoch进行normalization, 而relation不需要
             self.entities_embedding = tf.math.l2_normalize(self.entities_embedding, axis=1)
+
             for _ in range(batch_count):
                 pos_batch, neg_batch = self._generate_pos_neg_batch(self.batch_size)
                 self._update_embedding(pos_batch, neg_batch)
 
-            self.learning_rate = pow(0.95, epoch + 1) * self.learning_rate
             end_time = time.time()
             print("epoch: ", epoch + 1, "  cost time: %.3fs" % (end_time - start_time))
             print("total loss: %.6f, average loss: %.6f" % (self.total_loss, self.total_loss / self.total_sample_count))
@@ -61,20 +66,19 @@ class TfModel(metaclass=ABCMeta):
         # return total_loss
 
     def _init_embedding(self):
-        bound = 6 / tf.math.sqrt(self.embedding_dim)
-        self.entities_embedding = tf.Variable(shape=[len(self.kg.entity_ids), self.embedding_dim],
-                                              initializer=tf.random_uniform_initializer(minval=-bound, maxval=bound))
-        self.relations_embedding = tf.Variable(shape=[len(self.kg.relation_ids), self.embedding_dim],
-                                               initializer=tf.random_uniform_initializer(minval=-bound, maxval=bound))
+        bound = 6 / math.sqrt(self.embedding_dim)
+        uniform_initializer = tf.random_uniform_initializer(minval=-bound, maxval=bound)
+        self.entities_embedding = tf.Variable(uniform_initializer(shape=[len(self.kg.entity_ids), self.embedding_dim]))
+        self.relations_embedding = tf.Variable(uniform_initializer(shape=[len(self.kg.entity_ids), self.embedding_dim]))
 
         self.relations_embedding = tf.math.l2_normalize(self.relations_embedding, axis=1)
 
     @abstractmethod
-    def _update_embedding(self, pos_batch, neg_batch):
+    def _update_embedding(self, pos_quads, neg_quads):
         pass
 
     def _generate_pos_neg_batch(self, batch_size):
-        positive_batch = random.sample(self.kg.entity_ids, batch_size)
+        positive_batch = random.sample(self.kg.train_quads, batch_size)
         negative_batch = []
 
         # 随机替换正例头实体或尾实体, 得到对应的一个负例
