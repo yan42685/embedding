@@ -3,7 +3,7 @@ import tensorflow as tf
 
 
 class TransE(TfModel):
-    def loss_function(self, pos_quad, neg_quad):
+    def _loss_function(self, pos_quad, neg_quad):
         pos_h = tf.nn.embedding_lookup(self.entities_embedding, pos_quad[0])
         pos_r = tf.nn.embedding_lookup(self.relations_embedding, pos_quad[1])
         pos_t = tf.nn.embedding_lookup(self.entities_embedding, pos_quad[2])
@@ -23,3 +23,6 @@ class TransE(TfModel):
             raise RuntimeError("只支持L1或L2范数")
 
         return tf.reduce_sum(tf.maximum(self.margin + pos_score - neg_score, 0))
+
+    def _update_embedding(self, pos_batch, neg_batch):
+        pass
