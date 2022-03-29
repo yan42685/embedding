@@ -58,7 +58,7 @@ class SubDataSetGenerator:
                 quad = (elements[0], elements[1], elements[2], date)
                 quads.append(quad)
 
-        print("initial fact: %d, extracted quad: %d" % (initial_count, final_count))
+        print("initial facts: %d, extracted quads: %d" % (initial_count, final_count))
 
         return quads
 
@@ -77,7 +77,7 @@ class SubDataSetGenerator:
 
         filtered_quads = list(filter(lambda quad: quad[0] in entity_set, quads))
         self.all_quads = filtered_quads
-        print("filtered quad: %d" % len(filtered_quads))
+        print("filtered quads: %d" % len(filtered_quads))
 
         for (h, r, t, d) in filtered_quads:
             self.entities.add(h)
@@ -105,7 +105,7 @@ class SubDataSetGenerator:
         for (h, r, t, d) in difference_set:
             self.mixed_quads.append((h, r, t, "None"))
 
-        print("annotated quad: %d,   mixed quad:%d" % (len(self.annotated_quads), len(self.mixed_quads)))
+        print("annotated quads: %d,   mixed quads:%d" % (len(self.annotated_quads), len(self.mixed_quads)))
         random.shuffle(self.mixed_quads)
 
     @time_it
