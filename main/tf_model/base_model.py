@@ -8,8 +8,8 @@ import math
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, train_data=KG(), embedding_dim=50, epochs=3, batch_size=100,
-                 margin=4,
+    def __init__(self, train_data=KG(), embedding_dim=50, epochs=3, batch_size=50,
+                 margin=2,
                  learning_rate=0.01,
                  norm="L1"):
         self.kg = train_data

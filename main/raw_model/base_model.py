@@ -8,7 +8,7 @@ import random
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, entities, relations, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=1):
+    def __init__(self, entities, relations, facts, dimension=50, learning_rate=0.01, margin=2.0, norm=1):
         self.entities = entities
         self.relations = relations
         self.entity_vector_dict = {}
