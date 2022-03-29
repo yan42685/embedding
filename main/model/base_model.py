@@ -7,7 +7,7 @@ import random
 import math
 
 
-class TfModel(metaclass=ABCMeta):
+class BaseModel(metaclass=ABCMeta):
     def __init__(self, train_data=KG(), embedding_dim=50, epochs=3, batch_size=100,
                  margin=4,
                  learning_rate=0.01,
@@ -50,21 +50,6 @@ class TfModel(metaclass=ABCMeta):
             print("total loss: %.6f, average loss: %.6f" % (self.total_loss, self.total_loss / self.total_sample_count))
             print()
 
-        # positive_quads, negative_quads = self.generate_pos_neg_batch()
-        # optimizer = tf.optimizers.Adam(learning_rate=self.learning_rate)
-        # for _ in range(self.epochs):
-        #     with tf.GradientTape() as tape:
-        #         loss = self._loss_function(tf.constant(), tf.constant())
-        # grads = tape.gradient(loss, [pos])
-
-        # model = tf.keras.Model()
-        # model.compile(optimizer=optimizer, loss=self.loss_function)
-        # model.fit(x=self.positive_quads, y=self.negative_quads, epochs=self.epochs, batch_size=self.batch_size)
-        # total_loss = model.evaluate()
-
-        # print("total_loss: %.4f" % total_loss)
-        # return total_loss
-
     def _init_embedding(self):
         bound = 6 / math.sqrt(self.embedding_dim)
         uniform_initializer = tf.random_uniform_initializer(minval=-bound, maxval=bound)
@@ -94,3 +79,10 @@ class TfModel(metaclass=ABCMeta):
                     break
             negative_batch.append((head, relation, tail, date))
         return positive_batch, negative_batch
+
+    def _lookup_embedding(self, quad):
+        # 这里必须要用tf.Variable包装查询到的Tensor，不然后面无法计算梯度
+        head = tf.Variable(tf.nn.embedding_lookup(self.entities_embedding, [quad[0]]))
+        relation = tf.Variable(tf.nn.embedding_lookup(self.relations_embedding, [quad[1]]))
+        tail = tf.Variable(tf.nn.embedding_lookup(self.entities_embedding, [quad[2]]))
+        return head, relation, tail
