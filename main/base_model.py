@@ -10,11 +10,11 @@ import random
 class BaseModel(metaclass=ABCMeta):
     def __init__(self, entities, relations, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=1):
         self.entities = entities
-        self.entities_set = set(entities)
         self.relations = relations
         self.entity_vector_dict = {}
         self.relation_vector_dict = {}
         self.facts = facts
+        self.facts_set = set(facts)
         self.dimension = dimension
         self.learning_rate = learning_rate
         self.margin = margin
@@ -68,7 +68,7 @@ class BaseModel(metaclass=ABCMeta):
                 else:
                     tail = random.choice(self.entities)
                 # 确保负例不在原facts中
-                if (head, relation, tail) not in self.entities_set:
+                if (head, relation, tail) not in self.facts_set:
                     break
             negative_batch.append((head, relation, tail))
 

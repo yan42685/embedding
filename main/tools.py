@@ -32,7 +32,7 @@ def load_data(entity_file, relation_file, fact_file):
             fact = line.strip().split("\t")
             if len(fact) != 3:
                 continue
-            facts.append(fact)
+            facts.append(tuple(fact))
 
     print("Loading complete. entity: %d , relation: %d , fact: %d" % (
         len(entities), len(relations), len(facts)))

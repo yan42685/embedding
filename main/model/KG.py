@@ -17,11 +17,12 @@ class KG:
         self.directory = directory
         self.sep = sep
         self.entity_id_dict = {}
-        self.entity_count = 0
+        self.entity_ids = []
         self.relation_id_dict = {}
-        self.relation_count = 0
+        self.relation_ids = []
         self.all_quads = []
         self.train_quads = []
+        self.train_quads_set = set()
         self.validation_quads = []
         self.test_quads = []
         self._load_kg()
@@ -29,14 +30,15 @@ class KG:
     @time_it
     def _load_kg(self):
         entities = self._pd_read(self._ENTITY_FILENAME)
-        self.entity_count = len(entities[0])
-        self.entity_id_dict = dict(zip(entities[0], np.arange(self.entity_count)))
+        self.entity_ids = np.arange(len(entities[0]))
+        self.entity_id_dict = dict(zip(entities[0], self.entity_ids))
         relations = self._pd_read(self._RELATION_FILENAME)
-        self.relation_count = len(relations[0])
-        self.relation_id_dict = dict(zip(relations[0], np.arange(self.relation_count)))
+        self.relation_ids = np.arange(len(relations[0]))
+        self.relation_id_dict = dict(zip(relations[0], self.relation_ids))
 
         train_quads = self._pd_read(self._TRAIN_FILENAME)
         self.train_quads = list(train_quads.apply(self._quad2ids, axis=1))
+        self.train_quads_set = set(self.train_quads)
         validation_quads = self._pd_read(self._VALIDATION_FILENAME)
         self.validation_quads = list(validation_quads.apply(self._quad2ids, axis=1))
         test_quads = self._pd_read(self._TEST__FILENAME)
@@ -58,5 +60,3 @@ class KG:
         tail_id = self.entity_id_dict[quad[2]]
         date = quad[3]
         return head_id, relation_id, tail_id, date
-
-
