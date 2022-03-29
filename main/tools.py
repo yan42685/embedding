@@ -1,7 +1,7 @@
 import numpy as np
 import codecs
 import time
-from os.path import dirname, abspath
+from pathlib import Path
 
 
 def load_data(entity_file, relation_file, fact_file):
@@ -85,3 +85,14 @@ def exec_pipeline(input_param, *functions):
         else:
             result = function(result)
     return result
+
+
+def read_lines(path, encoding="utf-8"):
+    with codecs.open(path, "r", encoding=encoding) as file:
+        result = file.readlines()
+    return result
+
+
+def mkdir(dir_path: Path):
+    if not dir_path.is_dir():
+        dir_path.mkdir()
