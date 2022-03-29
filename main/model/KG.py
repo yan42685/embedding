@@ -1,4 +1,3 @@
-import codecs
 from pathlib import Path
 from tools import time_it
 import pandas as pd
@@ -61,5 +60,3 @@ class KG:
         return head_id, relation_id, tail_id, date
 
 
-if __name__ == "__main__":
-    kg = KG()
