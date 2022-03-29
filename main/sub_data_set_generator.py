@@ -8,6 +8,7 @@ import random
 import collections
 import re
 
+# 生成子数据集
 
 def main():
     test_input_path = Path.cwd().joinpath("target/yago4-wd-annotated-facts.ntx")
