@@ -10,8 +10,9 @@ import re
 
 
 def main():
+    test_input_path = Path.cwd().joinpath("target/yago4-wd-annotated-facts.ntx")
     # threshold = 14 对应99k quads     =15 对应75k quads
-    generator = SubDataSetGenerator()
+    generator = SubDataSetGenerator(input_path=test_input_path)
     generator.run()
 
 
