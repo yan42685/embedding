@@ -4,35 +4,33 @@ import time
 from pathlib import Path
 
 
-def load_data(entity_file, relation_file, fact_file):
+def load_data(entity_file, relation_file, fact_file, is_quad=False, encoding="utf-8"):
     print("loading files...")
 
     entities = []
     relations = []
     facts = []
 
-    with codecs.open(entity_file, "r") as file1, codecs.open(relation_file, "r") as file2, codecs.open(fact_file,
-                                                                                                       "r") as file3:
+    with codecs.open(entity_file, "r", encoding=encoding) as file1, codecs.open(relation_file, "r",
+                                                                                encoding=encoding) as file2, codecs.open(
+        fact_file, "r", encoding=encoding) as file3:
         lines1 = file1.readlines()
         for line in lines1:
             line = line.strip().split("\t")
-            if len(line) != 2:
-                continue
             entities.append(line[0])
 
         lines2 = file2.readlines()
         for line in lines2:
             line = line.strip().split("\t")
-            if len(line) != 2:
-                continue
             relations.append(line[0])
 
         lines3 = file3.readlines()
         for line in lines3:
             fact = line.strip().split("\t")
-            if len(fact) != 3:
-                continue
-            facts.append(tuple(fact))
+            if is_quad:
+                facts.append((fact[0], fact[1], fact[2]))
+            else:
+                facts.append(tuple(fact))
 
     print("Loading complete. entity: %d , relation: %d , fact: %d" % (
         len(entities), len(relations), len(facts)))
