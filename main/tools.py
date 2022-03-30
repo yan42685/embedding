@@ -4,40 +4,6 @@ import time
 from pathlib import Path
 
 
-# def load_data(entity_file, relation_file, fact_file, test_fact_file, encoding="utf-8"):
-#     print("loading files...")
-#
-#     entities = []
-#     relations = []
-#     facts = []
-#     test_facts = []
-#     with codecs.open(entity_file, "r", encoding=encoding) as file1, codecs.open(relation_file, "r",
-#                                                                                 encoding=encoding) as file2, codecs.open(
-#         fact_file, "r", encoding=encoding) as file3:
-#         lines1 = file1.readlines()
-#         for line in lines1:
-#             line = line.strip().split("\t")
-#             entities.append(line[0])
-#
-#         lines2 = file2.readlines()
-#         for line in lines2:
-#             line = line.strip().split("\t")
-#             relations.append(line[0])
-#
-#         lines3 = file3.readlines()
-#         for line in lines3:
-#             fact = line.strip().split("\t")
-#             facts.append((fact[0], fact[1], fact[2]))
-#
-#     with codecs.open(test_fact_file, "r", encoding=encoding) as file:
-#         for line in file.readlines():
-#             test_fact = line.strip().split("\t")
-#             test_facts.append((test_fact[0], test_fact[1], test_fact[2]))
-#
-#     print("Loading complete. entities: %d , relations: %d , facts: %d, test facts: %d" % (
-#         len(entities), len(relations), len(facts), len(test_facts)))
-#
-#     return entities, relations, facts, test_facts
 
 
 def generate_initial_vector(dimension):
