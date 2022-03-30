@@ -33,7 +33,7 @@ class Evaluator:
                 t_hits10_count += 1
 
         raw_mean_rank = (h_correct_rank_sum + t_correct_rank_sum) / (2 * len(self.test_quads))
-        raw_hits10 = 100 * (h_hits10_count + t_hits10_count) / (2 * self.entity_count)
+        raw_hits10 = 100 * (h_hits10_count + t_hits10_count) / (2 * len(self.test_quads))
 
         print("raw mean rank: %.4f, raw hits10: %.4f%%" % (raw_mean_rank, raw_hits10))
 

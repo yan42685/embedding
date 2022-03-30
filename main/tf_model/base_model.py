@@ -9,8 +9,8 @@ import math
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, kg=KG(), embedding_dim=50, epochs=3, batch_size=50,
-                 margin=2,
+    def __init__(self, kg=KG(), embedding_dim=50, epochs=3, batch_size=100,
+                 margin=1,
                  learning_rate=0.01,
                  norm="L1"):
         self.kg = kg
