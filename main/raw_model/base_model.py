@@ -8,7 +8,7 @@ import random
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, kg=KG(), epochs=400, batch_size=50, dimension=50, learning_rate=0.01, margin=2.0, norm=1):
+    def __init__(self, kg=KG(), epochs=100, batch_size=100, dimension=50, learning_rate=0.01, margin=1.0, norm=1):
         self.kg = kg
         self.epochs = epochs
         self.batch_size = batch_size

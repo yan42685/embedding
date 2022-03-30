@@ -20,7 +20,7 @@ def main():
 class SubDataSetGenerator:
     _DEFAULT_INPUT_PATH = Path.cwd().joinpath("data_set").joinpath("yago4-wd-annotated-facts.ntx")
 
-    def __init__(self, filter_threshold=10, max_quads_count=30000, input_path=_DEFAULT_INPUT_PATH, charset="utf-8",
+    def __init__(self, filter_threshold=15, max_quads_count=30000, input_path=_DEFAULT_INPUT_PATH, charset="utf-8",
                  sep="\t"):
         self.CHARSET = charset
         self.SEP = sep
@@ -69,12 +69,12 @@ class SubDataSetGenerator:
     @time_it
     def _filter_quads(self, quads):
         entity_dict = collections.defaultdict(list)
-        # 过滤出在头实体位置出现次数 在[threshold, 2 * threshold] 的实体所在在的四元组
+        # 过滤出在头实体位置出现次数 在[threshold, 3 * threshold] 的实体所在在的四元组
         for (h, r, t, d) in quads:
             entity_dict[h].append((h, r, t, d))
 
         for quads in entity_dict.values():
-            if self.filter_threshold <= len(quads) <= 2 * self.filter_threshold:
+            if self.filter_threshold <= len(quads) <= 3 * self.filter_threshold:
                 self.all_quads.extend(quads)
                 if len(self.all_quads) > self.max_quads_count:
                     break
