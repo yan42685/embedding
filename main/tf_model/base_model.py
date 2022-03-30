@@ -1,5 +1,6 @@
 from tf_model.KG import KG
 from abc import ABCMeta, abstractmethod
+from tools import time_it
 import time
 import tensorflow as tf
 import numpy as np
@@ -80,7 +81,7 @@ class BaseModel(metaclass=ABCMeta):
             negative_batch.append((head, relation, tail, date))
         return positive_batch, negative_batch
 
-
+    # @time_it
     def _lookup_embedding(self, quad):
         # 这里必须要用tf.Variable包装查询到的Tensor，不然后面无法计算梯度
         # TODO: 这里可能返回的是新的tensor，无法更新原来的向量
