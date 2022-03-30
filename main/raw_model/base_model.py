@@ -1,41 +1,42 @@
 from tools import generate_initial_vector, norm_l1, norm_l2, scale_to_unit_length
 import codecs
-import os
 import numpy as np
 from abc import ABCMeta, abstractmethod
+from raw_model.evaluator import Evaluator
+from tf_model.KG import KG
 import time
 import random
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, entities, relations, facts, dimension=50, learning_rate=0.01, margin=2.0, norm=1):
-        self.entities = entities
-        self.relations = relations
-        self.entity_vector_dict = {}
-        self.relation_vector_dict = {}
-        self.facts = facts
-        self.facts_set = set(facts)
+    def __init__(self, kg=KG(), epochs=1, batch_size=50, dimension=50, learning_rate=0.01, margin=2.0, norm=1):
+        self.kg = kg
+        self.epochs = epochs
+        self.batch_size = batch_size
         self.dimension = dimension
         self.learning_rate = learning_rate
         self.margin = margin
         self.norm = norm
+
+        self.entity_embeddings = []
+        self.relation_embeddings = []
         self.total_loss = 0.0
         # 总的样本数，用于计算平均loss
         self.total_sample_count = 0
 
-    def train(self, epoch_count=1, batch_size=50, data_set_name=""):
+    def train(self, ):
         self._init_embeddings()
-        batch_count = int(len(self.facts) / batch_size)
-        print("batch size: ", batch_size)
-        for epoch in range(epoch_count):
+        batch_count = int(len(self.kg.train_quads) / self.batch_size)
+        print("batch size: ", self.batch_size)
+        for epoch in range(self.epochs):
             start_time = time.time()
             self.total_loss = 0.0
             self.total_sample_count = 0
-            for entity in self.entity_vector_dict.keys():
-                self.entity_vector_dict[entity] = scale_to_unit_length(self.entity_vector_dict[entity])
+            for i in range(len(self.entity_embeddings)):
+                self.entity_embeddings[i] = scale_to_unit_length(self.entity_embeddings[i])
 
             for batch in range(batch_count):
-                positive_batch, negative_batch = self._generate_pos_neg_batch(batch_size)
+                positive_batch, negative_batch = self._generate_pos_neg_batch(self.batch_size)
                 self._update_embeddings(positive_batch, negative_batch)
             # 让学习率衰减
             self.learning_rate = pow(0.95, epoch + 1) * self.learning_rate
@@ -45,32 +46,32 @@ class BaseModel(metaclass=ABCMeta):
             print("average loss: %.6f" % (self.total_loss / self.total_sample_count))
             print()
 
+        Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.test_quads).evaluate()
         # self._output_result(data_set_name, batch_size)
 
     def _init_embeddings(self):
-        for entity in self.entities:
-            self.entity_vector_dict[entity] = generate_initial_vector(self.dimension)
+        for _ in range(len(self.kg.entity_ids)):
+            self.entity_embeddings.append(generate_initial_vector(self.dimension))
 
-        for relation in self.relations:
-            relation_vector = scale_to_unit_length(generate_initial_vector(self.dimension))
-            self.relation_vector_dict[relation] = relation_vector
+        for _ in range(len(self.kg.entity_ids)):
+            self.relation_embeddings.append(scale_to_unit_length(generate_initial_vector(self.dimension)))
 
     def _generate_pos_neg_batch(self, batch_size):
-        positive_batch = random.sample(self.facts, batch_size)
+        positive_batch = random.sample(self.kg.train_quads, batch_size)
         negative_batch = []
 
         # 随机替换正例头实体或尾实体, 得到对应的一个负例
-        for (head, relation, tail) in positive_batch:
+        for (head, relation, tail, date) in positive_batch:
             random_choice = np.random.random()
             while True:
                 if random_choice <= 0.5:
-                    head = random.choice(self.entities)
+                    head = random.choice(self.kg.entity_ids)
                 else:
-                    tail = random.choice(self.entities)
+                    tail = random.choice(self.kg.entity_ids)
                 # 确保负例不在原facts中
-                if (head, relation, tail) not in self.facts_set:
+                if (head, relation, tail) not in self.kg.train_quads_set:
                     break
-            negative_batch.append((head, relation, tail))
+            negative_batch.append((head, relation, tail, date))
 
         return positive_batch, negative_batch
 

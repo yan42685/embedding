@@ -1,4 +1,4 @@
-from tools import norm_l1, norm_l2
+from tools import norm_l1, norm_l2, time_it
 
 
 # 评估模型训练的效果
@@ -33,6 +33,7 @@ class Evaluator:
 
         print("raw mean rank: %.4f, raw hits10: %.4f%%" % (raw_mean_rank, raw_hits10))
 
+    @time_it
     # 对于某一个测试quad，计算每个实体在头实体预测和尾实体预测中的排名
     def _calculate_h_t_predict_ranks(self, quad):
         h = self.entity_embeddings[quad[0]]
