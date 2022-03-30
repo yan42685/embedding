@@ -20,7 +20,7 @@ def main():
 class SubDataSetGenerator:
     _DEFAULT_INPUT_PATH = Path.cwd().joinpath("data_set").joinpath("yago4-wd-annotated-facts.ntx")
 
-    def __init__(self, filter_threshold=15, max_quads_count=30000, input_path=_DEFAULT_INPUT_PATH, charset="utf-8",
+    def __init__(self, filter_threshold=12, max_quads_count=30000, input_path=_DEFAULT_INPUT_PATH, charset="utf-8",
                  sep="\t"):
         self.CHARSET = charset
         self.SEP = sep
@@ -69,12 +69,12 @@ class SubDataSetGenerator:
     @time_it
     def _filter_quads(self, quads):
         entity_dict = collections.defaultdict(list)
-        # 过滤出在头实体位置出现次数 在[threshold, 3 * threshold] 的实体所在在的四元组
+        # 过滤出在头实体位置出现次数 在[threshold, 2 * threshold] 的实体所在在的四元组
         for (h, r, t, d) in quads:
             entity_dict[h].append((h, r, t, d))
 
         for quads in entity_dict.values():
-            if self.filter_threshold <= len(quads) <= 3 * self.filter_threshold:
+            if self.filter_threshold <= len(quads) <= 2 * self.filter_threshold:
                 self.all_quads.extend(quads)
                 if len(self.all_quads) > self.max_quads_count:
                     break
@@ -108,6 +108,7 @@ class SubDataSetGenerator:
             self.mixed_quads.append((h, r, t, "None"))
 
         print("annotated quads: %d,   mixed quads:%d" % (len(self.annotated_quads), len(self.mixed_quads)))
+        random.shuffle(self.annotated_quads)
         random.shuffle(self.mixed_quads)
 
     @time_it
@@ -130,7 +131,7 @@ class SubDataSetGenerator:
     def _split_quads(quads):
         data_set = pd.DataFrame(quads)
         # 按 8:1:1 划分数据集
-        train_quads, tmp_set = train_test_split(data_set, train_size=0.8, random_state=123)
+        train_quads, tmp_set = train_test_split(data_set, train_size=0.85, random_state=123)
         validation_quads, test_quads = train_test_split(tmp_set, train_size=0.5, random_state=123)
         print("train quads: %d, validation quads: %d, test quads: %d" % (
             len(train_quads), len(validation_quads), len(test_quads)))
