@@ -1,15 +1,14 @@
-from tools import generate_initial_vector, norm_l1, norm_l2, scale_to_unit_length
-import codecs
+from tools import generate_initial_vector, scale_to_unit_length
 import numpy as np
 from abc import ABCMeta, abstractmethod
-from raw_model.evaluator import Evaluator
+from tf_model.evaluator import Evaluator
 from tf_model.KG import KG
 import time
 import random
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, kg=KG(), epochs=1, batch_size=50, dimension=50, learning_rate=0.01, margin=2.0, norm=1):
+    def __init__(self, kg=KG(), epochs=400, batch_size=50, dimension=50, learning_rate=0.01, margin=2.0, norm=1):
         self.kg = kg
         self.epochs = epochs
         self.batch_size = batch_size
