@@ -13,7 +13,6 @@ import re
 
 def main():
     test_input_path = Path.cwd().joinpath("target/yago4-wd-annotated-facts.ntx")
-    # threshold = 14 对应99k quads     =15 对应75k quads
     generator = SubDataSetGenerator(input_path=test_input_path)
     generator.run()
 
@@ -21,13 +20,15 @@ def main():
 class SubDataSetGenerator:
     _DEFAULT_INPUT_PATH = Path.cwd().joinpath("data_set").joinpath("yago4-wd-annotated-facts.ntx")
 
-    def __init__(self, filter_threshold=14, input_path=_DEFAULT_INPUT_PATH, charset="utf-8", sep="\t"):
+    def __init__(self, filter_threshold=5, max_quads_count=30000, input_path=_DEFAULT_INPUT_PATH, charset="utf-8",
+                 sep="\t"):
         self.CHARSET = charset
         self.SEP = sep
         self.filter_threshold = filter_threshold
+        self.max_quads_count = max_quads_count
         self.input_path = input_path
-        self.annotated_output_dir = input_path.parent.joinpath("YG50K")
-        self.mixed_output_dir = input_path.parent.joinpath("YG99K")
+        self.annotated_output_dir = input_path.parent.joinpath("YG15K")
+        self.mixed_output_dir = input_path.parent.joinpath("YG30K")
         self.entities = set()
         self.relations = set()
         self.all_quads = []
@@ -67,22 +68,20 @@ class SubDataSetGenerator:
 
     @time_it
     def _filter_quads(self, quads):
-        entity_dict = collections.defaultdict(int)
-        entity_set = set()
-        # 过滤出在头实体位置出现次数 >= threshold的实体所在在的四元组
+        entity_dict = collections.defaultdict(list)
+        # 过滤出在头实体位置出现次数 在[threshold, 2 * threshold] 的实体所在在的四元组
         for (h, r, t, d) in quads:
-            entity_dict[h] += 1
-            entity_dict[t] += 1
-            if entity_dict[h] >= self.filter_threshold:
-                entity_set.add(h)
-            if entity_dict[t] >= self.filter_threshold:
-                entity_set.add(t)
+            entity_dict[h].append((h, r, t, d))
 
-        filtered_quads = list(filter(lambda quad: quad[0] in entity_set, quads))
-        self.all_quads = filtered_quads
-        print("filtered quads: %d" % len(filtered_quads))
+        for quads in entity_dict.values():
+            if self.filter_threshold <= len(quads) <= 2 * self.filter_threshold:
+                self.all_quads.extend(quads)
+                if len(self.all_quads) > self.max_quads_count:
+                    break
 
-        for (h, r, t, d) in filtered_quads:
+        print("filtered quads: %d" % len(self.all_quads))
+
+        for (h, r, t, d) in self.all_quads:
             self.entities.add(h)
             self.entities.add(t)
             self.relations.add(r)
@@ -133,6 +132,8 @@ class SubDataSetGenerator:
         # 按 8:1:1 划分数据集
         train_quads, tmp_set = train_test_split(data_set, train_size=0.8, random_state=123)
         validation_quads, test_quads = train_test_split(tmp_set, train_size=0.5, random_state=123)
+        print("train quads: %d, validation quads: %d, test quads: %d" % (
+            len(train_quads), len(validation_quads), len(test_quads)))
         return train_quads, validation_quads, test_quads
 
     def _pandas_write(self, path, data):

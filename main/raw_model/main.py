@@ -13,15 +13,16 @@ def main(data_set_name):
         relation_file = "../data_set/WN18/relation2id.txt"
         fact_file = "../data_set/WN18/wordnet-mlj12-test.txt"
     elif data_set_name == "yago4":
-        entity_file = "../data_set/YG50K/entity.txt"
-        relation_file = "../data_set/YG50K/relation.txt"
-        fact_file = "../data_set/YG50K/train.txt"
+        entity_file = "../target/YG15K/entity.txt"
+        relation_file = "../target/YG15K/relation.txt"
+        fact_file = "../target/YG15K/train.txt"
         is_quad = True
     else:
         raise RuntimeError("Wrong data set name")
     entities, relations, facts = load_data(entity_file, relation_file, fact_file, is_quad=is_quad)
 
-    model = TransE(entities, relations, facts, dimension=50, learning_rate=0.01, margin=1.0, norm=1)
+    # margin = 1的效果比 = 2 的效果好
+    model = TransE(entities, relations, facts, dimension=50, learning_rate=0.01, margin=2.0, norm=1)
     model.train(epoch_count=3, data_set_name=data_set_name)
 
 
