@@ -17,6 +17,7 @@ def main():
     generator.run()
 
 
+# TODO: 选取和时间相关的关系
 class SubDataSetGenerator:
     _DEFAULT_INPUT_PATH = Path.cwd().joinpath("data_set").joinpath("yago4-wd-annotated-facts.ntx")
 

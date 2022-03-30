@@ -45,7 +45,7 @@ class BaseModel(metaclass=ABCMeta):
             print("average loss: %.6f" % (self.total_loss / self.total_sample_count))
             print()
 
-        Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.test_quads).evaluate()
+        Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.test_quads, norm=self.norm).evaluate()
         # self._output_result(data_set_name, batch_size)
 
     def _init_embeddings(self):
