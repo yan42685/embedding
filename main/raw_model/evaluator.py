@@ -12,10 +12,29 @@ class Evaluator:
         self.norm = norm
 
     def evaluate(self):
-        pass
+        self._calculate_mean_rank_and_hits10()
+
+    def _calculate_mean_rank_and_hits10(self):
+        h_correct_rank_sum = 0
+        t_correct_rank_sum = 0
+        h_hits10_count = 0
+        t_hits10_count = 0
+        for quad in self.test_quads:
+            h_predict_ranks, t_predict_ranks = self._calculate_h_t_predict_ranks(quad)
+            h_correct_rank_sum += h_predict_ranks[quad[0]]
+            t_correct_rank_sum += t_predict_ranks[quad[2]]
+            if h_predict_ranks[quad[0]] <= 10:
+                h_hits10_count += 1
+            if t_predict_ranks[quad[2]] <= 10:
+                t_hits10_count += 1
+
+        raw_mean_rank = (h_correct_rank_sum + t_correct_rank_sum) / (2 * len(self.test_quads))
+        raw_hits10 = 100 * (h_hits10_count + t_hits10_count) / (2 * self.entity_count)
+
+        print("raw mean rank: %.4f, raw hits10: %.4f%%" % (raw_mean_rank, raw_hits10))
 
     # 对于某一个测试quad，计算每个实体在头实体预测和尾实体预测中的排名
-    def _get_h_t_predict_ranks(self, quad):
+    def _calculate_h_t_predict_ranks(self, quad):
         h = self.entity_embeddings[quad[0]]
         r = self.relation_embeddings[quad[1]]
         t = self.entity_embeddings[quad[2]]
