@@ -8,11 +8,11 @@ import math
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, train_data=KG(), embedding_dim=50, epochs=3, batch_size=50,
+    def __init__(self, kg=KG(), embedding_dim=50, epochs=3, batch_size=50,
                  margin=2,
                  learning_rate=0.01,
                  norm="L1"):
-        self.kg = train_data
+        self.kg = kg
         self.embedding_dim = embedding_dim
         self.epochs = epochs
         self.batch_size = batch_size
@@ -80,8 +80,10 @@ class BaseModel(metaclass=ABCMeta):
             negative_batch.append((head, relation, tail, date))
         return positive_batch, negative_batch
 
+
     def _lookup_embedding(self, quad):
         # 这里必须要用tf.Variable包装查询到的Tensor，不然后面无法计算梯度
+        # TODO: 这里可能返回的是新的tensor，无法更新原来的向量
         head = tf.Variable(tf.nn.embedding_lookup(self.entities_embedding, [quad[0]]))
         relation = tf.Variable(tf.nn.embedding_lookup(self.relations_embedding, [quad[1]]))
         tail = tf.Variable(tf.nn.embedding_lookup(self.entities_embedding, [quad[2]]))
