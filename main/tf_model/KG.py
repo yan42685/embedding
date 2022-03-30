@@ -5,7 +5,7 @@ import numpy as np
 
 
 class KG:
-    _DEFAULT_DIR = Path.cwd().parent.joinpath("data_set/YG50K")
+    _DEFAULT_DIR = Path.cwd().parent.joinpath("target/YG15K")
 
     _ENTITY_FILENAME = "entity.txt"
     _RELATION_FILENAME = "relation.txt"

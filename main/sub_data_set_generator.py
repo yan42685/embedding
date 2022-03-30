@@ -20,7 +20,7 @@ def main():
 class SubDataSetGenerator:
     _DEFAULT_INPUT_PATH = Path.cwd().joinpath("data_set").joinpath("yago4-wd-annotated-facts.ntx")
 
-    def __init__(self, filter_threshold=5, max_quads_count=30000, input_path=_DEFAULT_INPUT_PATH, charset="utf-8",
+    def __init__(self, filter_threshold=10, max_quads_count=30000, input_path=_DEFAULT_INPUT_PATH, charset="utf-8",
                  sep="\t"):
         self.CHARSET = charset
         self.SEP = sep
