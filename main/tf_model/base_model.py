@@ -22,8 +22,8 @@ class BaseModel(metaclass=ABCMeta):
         self.norm = norm
 
         self.optimizer = None
-        self.entities_embedding = None
-        self.relations_embedding = None
+        self.entity_embeddings = []
+        self.relation_embeddings = []
         self.total_loss = 0.0
         # 总的样本数，用于计算平均loss
         self.total_sample_count = 0
@@ -40,7 +40,8 @@ class BaseModel(metaclass=ABCMeta):
             self.learning_rate = pow(0.95, epoch) * self.learning_rate
             self.optimizer = tf.keras.optimizers.SGD(learning_rate=self.learning_rate)
             # 只有entity需要在每个epoch进行normalization, 而relation不需要
-            self.entities_embedding = tf.math.l2_normalize(self.entities_embedding, axis=1)
+            for i in range(len(self.entity_embeddings)):
+                self.entity_embeddings[i] = tf.Variable(tf.math.l2_normalize(self.entity_embeddings[i]))
 
             for _ in range(batch_count):
                 pos_batch, neg_batch = self._generate_pos_neg_batch(self.batch_size)
@@ -53,15 +54,29 @@ class BaseModel(metaclass=ABCMeta):
 
     def _init_embedding(self):
         bound = 6 / math.sqrt(self.embedding_dim)
-        uniform_initializer = tf.random_uniform_initializer(minval=-bound, maxval=bound)
-        self.entities_embedding = tf.Variable(uniform_initializer(shape=[len(self.kg.entity_ids), self.embedding_dim]))
-        self.relations_embedding = tf.Variable(uniform_initializer(shape=[len(self.kg.entity_ids), self.embedding_dim]))
 
-        self.relations_embedding = tf.math.l2_normalize(self.relations_embedding, axis=1)
+        for _ in range(len(self.kg.entity_ids)):
+            self.entity_embeddings.append(
+                tf.Variable(tf.random.uniform(shape=[self.embedding_dim], minval=-bound, maxval=bound)))
+        for _ in range(len(self.kg.relation_ids)):
+            self.relation_embeddings.append(
+                tf.Variable(
+                    tf.math.l2_normalize(tf.random.uniform(shape=[self.embedding_dim], minval=-bound, maxval=bound))))
 
-    @abstractmethod
+    @time_it
     def _update_embedding(self, pos_quads, neg_quads):
-        pass
+        for pos_quad in pos_quads:
+            for neg_quad in neg_quads:
+                pos_h, pos_r, pos_t = self._lookup_embeddings(pos_quad)
+                neg_h, neg_r, neg_t = self._lookup_embeddings(neg_quad)
+                variables = [pos_h, pos_r, pos_t, neg_h, neg_r, neg_t]
+
+                with tf.GradientTape() as tape:
+                    loss = self._loss_function(pos_h, pos_r, pos_t, neg_h, neg_r, neg_t)
+                grads = tape.gradient(loss, variables)
+                self.optimizer.apply_gradients(grads_and_vars=zip(grads, variables))
+                self.total_sample_count += 1
+                self.total_loss += loss.numpy()
 
     def _generate_pos_neg_batch(self, batch_size):
         positive_batch = random.sample(self.kg.train_quads, batch_size)
@@ -82,10 +97,12 @@ class BaseModel(metaclass=ABCMeta):
         return positive_batch, negative_batch
 
     # @time_it
-    def _lookup_embedding(self, quad):
-        # 这里必须要用tf.Variable包装查询到的Tensor，不然后面无法计算梯度
-        # TODO: 这里可能返回的是新的tensor，无法更新原来的向量
-        head = tf.Variable(tf.nn.embedding_lookup(self.entities_embedding, [quad[0]]))
-        relation = tf.Variable(tf.nn.embedding_lookup(self.relations_embedding, [quad[1]]))
-        tail = tf.Variable(tf.nn.embedding_lookup(self.entities_embedding, [quad[2]]))
+    def _lookup_embeddings(self, quad):
+        head = self.entity_embeddings[quad[0]]
+        relation = self.relation_embeddings[quad[1]]
+        tail = self.entity_embeddings[quad[2]]
         return head, relation, tail
+
+    @abstractmethod
+    def _loss_function(self, pos_h, pos_r, pos_t, neg_h, neg_r, neg_t):
+        pass

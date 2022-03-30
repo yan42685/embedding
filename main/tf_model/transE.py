@@ -19,17 +19,3 @@ class TransE(BaseModel):
 
         return tf.reduce_sum(tf.maximum(self.margin + pos_score - neg_score, 0))
 
-    @time_it
-    def _update_embedding(self, pos_quads, neg_quads):
-        for pos_quad in pos_quads:
-            for neg_quad in neg_quads:
-                pos_h, pos_r, pos_t = self._lookup_embedding(pos_quad)
-                neg_h, neg_r, neg_t = self._lookup_embedding(neg_quad)
-                variables = [pos_h, pos_r, pos_t, neg_h, neg_r, neg_t]
-
-                with tf.GradientTape() as tape:
-                    loss = self._loss_function(pos_h, pos_r, pos_t, neg_h, neg_r, neg_t)
-                grads = tape.gradient(loss, variables)
-                self.optimizer.apply_gradients(grads_and_vars=zip(grads, variables))
-                # print("step loss: %.4f" % loss.numpy())
-
