@@ -4,6 +4,7 @@ from tools import time_it
 
 
 class TransE(BaseModel):
+    # @time_it
     def _loss_function(self, pos_h, pos_r, pos_t, neg_h, neg_r, neg_t):
         pos_distance = pos_h + pos_r - pos_t
         neg_distance = neg_h + neg_r - neg_t
