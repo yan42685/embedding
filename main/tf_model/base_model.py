@@ -31,6 +31,7 @@ class BaseModel(metaclass=ABCMeta):
     def train(self):
         self._init_embedding()
         batch_count = int(len(self.kg.train_quads) / self.batch_size)
+        print("batch size: %d, batch count: %d" % (self.batch_size, batch_count))
 
         for epoch in range(self.epochs):
             start_time = time.time()
