@@ -21,7 +21,7 @@ class BaseModel(metaclass=ABCMeta):
         self.learning_rate = learning_rate
         self.norm = norm
 
-        self.optimizer = None
+        self.optimizer = tf.keras.optimizers.SGD(learning_rate=learning_rate)
         self.entity_embeddings = []
         self.relation_embeddings = []
         self.total_loss = 0.0
@@ -36,9 +36,6 @@ class BaseModel(metaclass=ABCMeta):
             start_time = time.time()
             self.total_loss = 0.0
             self.total_sample_count = 0
-            # 让学习率衰减
-            self.learning_rate = pow(0.95, epoch) * self.learning_rate
-            self.optimizer = tf.keras.optimizers.SGD(learning_rate=self.learning_rate)
             # 只有entity需要在每个epoch进行normalization, 而relation不需要
             for i in range(len(self.entity_embeddings)):
                 self.entity_embeddings[i] = tf.Variable(tf.math.l2_normalize(self.entity_embeddings[i]))
@@ -46,6 +43,8 @@ class BaseModel(metaclass=ABCMeta):
             for _ in range(batch_count):
                 pos_batch, neg_batch = self._generate_pos_neg_batch(self.batch_size)
                 self._update_embedding(pos_batch, neg_batch)
+                print("total loss: %.6f, average loss: %.6f" % (
+                    self.total_loss, self.total_loss / self.total_sample_count))
 
             end_time = time.time()
             print("epoch: ", epoch + 1, "  cost time: %.3fs" % (end_time - start_time))
@@ -62,21 +61,6 @@ class BaseModel(metaclass=ABCMeta):
             self.relation_embeddings.append(
                 tf.Variable(
                     tf.math.l2_normalize(tf.random.uniform(shape=[self.embedding_dim], minval=-bound, maxval=bound))))
-
-    @time_it
-    def _update_embedding(self, pos_quads, neg_quads):
-        for pos_quad in pos_quads:
-            for neg_quad in neg_quads:
-                pos_h, pos_r, pos_t = self._lookup_embeddings(pos_quad)
-                neg_h, neg_r, neg_t = self._lookup_embeddings(neg_quad)
-                variables = [pos_h, pos_r, pos_t, neg_h, neg_r, neg_t]
-
-                with tf.GradientTape() as tape:
-                    loss = self._loss_function(pos_h, pos_r, pos_t, neg_h, neg_r, neg_t)
-                grads = tape.gradient(loss, variables)
-                self.optimizer.apply_gradients(grads_and_vars=zip(grads, variables))
-                self.total_sample_count += 1
-                self.total_loss += loss.numpy()
 
     def _generate_pos_neg_batch(self, batch_size):
         positive_batch = random.sample(self.kg.train_quads, batch_size)
@@ -95,6 +79,21 @@ class BaseModel(metaclass=ABCMeta):
                     break
             negative_batch.append((head, relation, tail, date))
         return positive_batch, negative_batch
+
+    @time_it
+    def _update_embedding(self, pos_quads, neg_quads):
+        for pos_quad in pos_quads:
+            for neg_quad in neg_quads:
+                pos_h, pos_r, pos_t = self._lookup_embeddings(pos_quad)
+                neg_h, neg_r, neg_t = self._lookup_embeddings(neg_quad)
+                variables = [pos_h, pos_r, pos_t, neg_h, neg_r, neg_t]
+
+                with tf.GradientTape() as tape:
+                    loss = self._loss_function(pos_h, pos_r, pos_t, neg_h, neg_r, neg_t)
+                grads = tape.gradient(loss, variables)
+                self.optimizer.apply_gradients(grads_and_vars=zip(grads, variables))
+                self.total_sample_count += 1
+                self.total_loss += loss.numpy()
 
     # @time_it
     def _lookup_embeddings(self, quad):
