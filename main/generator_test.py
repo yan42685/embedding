@@ -36,6 +36,7 @@ df3 = df3.dropna()
 df3 = df3.drop_duplicates()
 
 head_counts = df3["head"].value_counts(sort=False)
-df4 = df3[df3["head"].isin(head_counts.index[head_counts > 25])]
-tail_counts = df4["tail"].value_counts(sort=False)
-df4 = df4[df4["tail"].isin(tail_counts.index[tail_counts > 25])]
+tail_counts = df3["tail"].value_counts(sort=False)
+df4 = df3[df3["head"].isin(head_counts.index[head_counts > 10])]
+df5 = df3[df3["tail"].isin(tail_counts.index[tail_counts > 10])]
+df6 = pd.merge(df4, df5)
