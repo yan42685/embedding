@@ -41,33 +41,33 @@ class Evaluator:
             filter_t_correct_rank_sum += g
             filter_t_hits10_count += h
 
-        all_quads_count = len(self.all_quads_set)
+        test_quads_count = len(self.test_quads)
         print("-----Raw-----")
         print("-----head prediction-----")
-        print("MeanRank: %.1f, Hits@10: %.3f%%" % (raw_h_correct_rank_sum / all_quads_count,
-                                                   100 * raw_h_hits10_count / all_quads_count))
+        print("MeanRank: %.1f, Hits@10: %.3f%%" % (raw_h_correct_rank_sum / test_quads_count,
+                                                   100 * raw_h_hits10_count / test_quads_count))
         print("-----tail prediction-----")
-        print("MeanRank: %.1f, Hits@10: %.3f%%" % (raw_t_correct_rank_sum / all_quads_count,
-                                                   100 * raw_t_hits10_count / all_quads_count))
+        print("MeanRank: %.1f, Hits@10: %.3f%%" % (raw_t_correct_rank_sum / test_quads_count,
+                                                   100 * raw_t_hits10_count / test_quads_count))
         print("------Raw Average------")
-        print("MeanRank: %.1f, Hits@10: %.3f%%" % ((raw_h_correct_rank_sum / all_quads_count +
-                                                    raw_t_correct_rank_sum / all_quads_count) / 2,
-                                                   100 * (raw_h_hits10_count / all_quads_count +
-                                                          raw_t_hits10_count / all_quads_count) / 2))
+        print("MeanRank: %.1f, Hits@10: %.3f%%" % ((raw_h_correct_rank_sum / test_quads_count +
+                                                    raw_t_correct_rank_sum / test_quads_count) / 2,
+                                                   100 * (raw_h_hits10_count / test_quads_count +
+                                                          raw_t_hits10_count / test_quads_count) / 2))
 
         print()
         print("-----Filter-----")
         print("-----head prediction-----")
-        print("MeanRank: %.1f, Hits@10: %.3f%%" % (filter_h_correct_rank_sum / all_quads_count,
-                                                   100 * filter_h_hits10_count / all_quads_count))
+        print("MeanRank: %.1f, Hits@10: %.3f%%" % (filter_h_correct_rank_sum / test_quads_count,
+                                                   100 * filter_h_hits10_count / test_quads_count))
         print("-----tail prediction-----")
-        print("MeanRank: %.1f, Hits@10: %.3f%%" % (filter_t_correct_rank_sum / all_quads_count,
-                                                   100 * filter_t_hits10_count / all_quads_count))
+        print("MeanRank: %.1f, Hits@10: %.3f%%" % (filter_t_correct_rank_sum / test_quads_count,
+                                                   100 * filter_t_hits10_count / test_quads_count))
         print("------Filter Average------")
-        print("MeanRank: %.1f, Hits@10: %.3f%%" % ((filter_h_correct_rank_sum / all_quads_count +
-                                                    filter_t_correct_rank_sum / all_quads_count) / 2,
-                                                   100 * (filter_h_hits10_count / all_quads_count +
-                                                          filter_t_hits10_count / all_quads_count) / 2))
+        print("MeanRank: %.1f, Hits@10: %.3f%%" % ((filter_h_correct_rank_sum / test_quads_count +
+                                                    filter_t_correct_rank_sum / test_quads_count) / 2,
+                                                   100 * (filter_h_hits10_count / test_quads_count +
+                                                          filter_t_hits10_count / test_quads_count) / 2))
 
     # 按预测距离排序实体id
     def _calculate_sorted_ids_by_prediction_distance(self, test_quad):
