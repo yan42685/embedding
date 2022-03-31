@@ -57,7 +57,7 @@ class SubDataSetGenerator:
 
         df2 = facts_df.loc[facts_df["relation"].isin(time_sensitive_relations)]
         df2 = pd.merge(df2, date_facts_df.drop(columns=["relation"]), on="head")
-        # 数据集类型2: 少部分关系有很强的时间顺序 threshold 取200
+        # [下面这行注释代码表示 数据集类型2]: 少部分关系有很强的时间顺序 threshold 取200
         # df2 = pd.merge(facts_df, date_facts_df.drop(columns=["relation"]), on="head")
         df2 = df2.drop(columns=["date_fact_id", "fact_id", "useless1", "useless2"])
 
