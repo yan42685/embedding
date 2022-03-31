@@ -1,35 +1,26 @@
-from tools import time_it, mkdir
-from sklearn.model_selection import train_test_split
-import codecs
-import pandas as pd
 from pathlib import Path
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from tools import time_it, mkdir
 import random
 
-import collections
-import re
-
-
-# 生成子数据集
 
 def main():
-    test_input_path = Path.cwd().joinpath("target/yago4-wd-annotated-facts.ntx")
-    generator = SubDataSetGenerator(input_path=test_input_path)
-    generator.run()
+    test_input_dir = Path.cwd().joinpath("target")
+    SubDataSetGenerator(input_dir=test_input_dir).generate()
 
 
-# TODO: 选取和时间相关的关系
 class SubDataSetGenerator:
-    _DEFAULT_INPUT_PATH = Path.cwd().joinpath("data_set").joinpath("yago4-wd-annotated-facts.ntx")
-
-    def __init__(self, filter_threshold=12, max_quads_count=30000, input_path=_DEFAULT_INPUT_PATH, charset="utf-8",
-                 sep="\t"):
-        self.CHARSET = charset
+    def __init__(self, input_dir, threshold=40, sep="\t"):
+        self.input_dir = input_dir
+        self.facts_path = input_dir.joinpath("yagoFacts.tsv")
+        self.date_facts_path = input_dir.joinpath("yagoDateFacts.tsv")
+        self.meta_facts_path = input_dir.joinpath("yagoMetaFacts.tsv")
+        self.threshold = threshold
         self.sep = sep
-        self.filter_threshold = filter_threshold
-        self.max_quads_count = max_quads_count
-        self.input_path = input_path
-        self.annotated_output_dir = input_path.parent.joinpath("YG15K")
-        self.mixed_output_dir = input_path.parent.joinpath("YG30K")
+
+        self.annotated_output_dir = input_dir.joinpath("YG15K")
+        self.mixed_output_dir = input_dir.joinpath("YG30K")
         self.entities = set()
         self.relations = set()
         self.all_quads = []
@@ -37,57 +28,54 @@ class SubDataSetGenerator:
         self.mixed_quads = []
 
     @time_it
-    def run(self):
-        extract_quads = self._extract_quads()
-        self._filter_quads(extract_quads)
+    def generate(self):
+        print("Start generating...")
+        self._extract_quads()
+        self._filter_quads()
         self._output_data(self.annotated_output_dir, self.annotated_quads)
         self._output_data(self.mixed_output_dir, self.mixed_quads)
+        print("Generating complete")
 
-    @time_it
+
     def _extract_quads(self):
-        with codecs.open(self.input_path, encoding=self.CHARSET) as file:
-            lines = file.readlines()
-        # 匹配 <abc> 内的字符串
-        elements_pattern = re.compile(r'(?<=<)[^<>]+(?=>)')
-        # 匹配"1999"或"1999-01-01"这样的字符串双引号里的内容
-        date_pattern = re.compile(r'(?<=")\d{4}.*(?=")')
-        quads = []
-        initial_count = 0
-        final_count = 0
-        for line in lines:
-            initial_count += 1
-            elements = elements_pattern.findall(line)
-            if len(elements) == 5 and elements[3].endswith("startDate"):
-                final_count += 1
-                date = date_pattern.findall(line)[0]
-                quad = (elements[0], elements[1], elements[2], date)
-                quads.append(quad)
+        facts_df = pd.read_csv(self.facts_path, header=None, sep=self.sep)
+        date_facts_df = pd.read_csv(self.date_facts_path, header=None, sep=self.sep)
+        meta_facts_df = pd.read_csv(self.meta_facts_path, header=None, sep=self.sep)
 
-        print("initial facts: %d, extracted quads: %d" % (initial_count, final_count))
+        facts_df.columns = ["fact_id", "head", "relation", "tail", "useless1"]
+        date_facts_df.columns = ["date_fact_id", "head", "relation", "useless2", "date"]
+        meta_facts_df.columns = ["meta_fact_id", "fact_id", "verb", "useless3", "date"]
+        # 合并facts和meta_facts
+        df1 = pd.merge(facts_df, meta_facts_df, on="fact_id")
+        df1 = df1.loc[df1["verb"] == "<occursSince>"]
+        df1 = df1.drop(columns=["meta_fact_id", "fact_id", "verb", "useless1", "useless3"])
 
-        return quads
+        # 合并facts和date_facts
+        # 数据集类型1: 大部分关系都有很强的时间顺序
+        time_sensitive_relations = {"<wasBornIn>", "<isAffiliatedTo>", "<hasWonPrize>", "<diedIn>", "<hasChild>",
+                                    "<graduatedFrom>", "<isMarriedTo>", "<worksAt>", "<directed>", "<isLeaderOf>"}
 
-    @time_it
-    def _filter_quads(self, quads):
-        entity_dict = collections.defaultdict(list)
-        # 过滤出在头实体位置出现次数 在[threshold, 2 * threshold] 的实体所在在的四元组
-        for (h, r, t, d) in quads:
-            entity_dict[h].append((h, r, t, d))
+        df2 = facts_df.loc[facts_df["relation"].isin(time_sensitive_relations)]
+        df2 = pd.merge(df2, date_facts_df.drop(columns=["relation"]), on="head")
+        # 数据集类型2: 少部分关系有很强的时间顺序 threshold 取200
+        # df2 = pd.merge(facts_df, date_facts_df.drop(columns=["relation"]), on="head")
+        df2 = df2.drop(columns=["date_fact_id", "fact_id", "useless1", "useless2"])
 
-        for quads in entity_dict.values():
-            if self.filter_threshold <= len(quads) <= 2 * self.filter_threshold:
-                self.all_quads.extend(quads)
-                if len(self.all_quads) > self.max_quads_count:
-                    break
+        # 得到最终结果
+        df3 = pd.concat([df1, df2])
+        df3 = df3.dropna()
+        df3 = df3.drop_duplicates()
 
-        print("filtered quads: %d" % len(self.all_quads))
+        counts = df3['head'].value_counts(sort=False)
+        # 头实体重复出现次数大于等于threshold的quad
+        df4 = df3[df3['head'].isin(counts.index[counts >= self.threshold])]
+        self.all_quads = list(df4.itertuples(index=False, name=None))
 
+    def _filter_quads(self):
         for (h, r, t, d) in self.all_quads:
             self.entities.add(h)
-            self.entities.add(t)
             self.relations.add(r)
-        print("filtered entities: %d" % len(self.entities))
-        print("filtered relations: %d" % len(self.relations))
+            self.entities.add(t)
 
         # 得到annotated_quads
         sample_count = int(len(self.all_quads) / 2)
@@ -106,7 +94,7 @@ class SubDataSetGenerator:
         self.mixed_quads = list(self.annotated_quads)
         difference_set = set(self.all_quads).difference(self.annotated_quads)
         for (h, r, t, d) in difference_set:
-            self.mixed_quads.append((h, r, t, "None"))
+            self.mixed_quads.append((h, r, t, -1))
 
         print("annotated quads: %d,   mixed quads:%d" % (len(self.annotated_quads), len(self.mixed_quads)))
         random.shuffle(self.annotated_quads)
