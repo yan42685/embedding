@@ -24,7 +24,7 @@ class SubDataSetGenerator:
     def __init__(self, filter_threshold=12, max_quads_count=30000, input_path=_DEFAULT_INPUT_PATH, charset="utf-8",
                  sep="\t"):
         self.CHARSET = charset
-        self.SEP = sep
+        self.sep = sep
         self.filter_threshold = filter_threshold
         self.max_quads_count = max_quads_count
         self.input_path = input_path
@@ -140,7 +140,7 @@ class SubDataSetGenerator:
 
     def _pandas_write(self, path, data):
         df = pd.DataFrame(data)
-        df.to_csv(path, sep=self.SEP, index=False, header=None)
+        df.to_csv(path, sep=self.sep, index=False, header=None)
 
 
 if __name__ == "__main__":

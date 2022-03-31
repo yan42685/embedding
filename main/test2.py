@@ -2,9 +2,9 @@ from pathlib import Path
 import pandas as pd
 
 input_dir = Path.cwd()
-facts_path = input_dir.joinpath("target/yago3Facts.tsv")
-date_facts_path = input_dir.joinpath("target/yago3DateFacts.tsv")
-meta_facts_path = input_dir.joinpath("target/yago3MetaFacts.tsv")
+facts_path = input_dir.joinpath("target/yagoFacts.tsv")
+date_facts_path = input_dir.joinpath("target/yagoDateFacts.tsv")
+meta_facts_path = input_dir.joinpath("target/yagoMetaFacts.tsv")
 
 facts_df = pd.read_csv(facts_path, header=None, sep="\t")
 date_facts_df = pd.read_csv(date_facts_path, header=None, sep="\t")
