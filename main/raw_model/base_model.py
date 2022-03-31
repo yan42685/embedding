@@ -1,4 +1,4 @@
-from tools import generate_initial_vector, scale_to_unit_length
+from tools import generate_initial_vector, scale_to_unit_length, time_it
 import numpy as np
 from abc import ABCMeta, abstractmethod
 from raw_model.evaluator import Evaluator
@@ -8,7 +8,7 @@ import random
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, kg=KG(), epochs=1, batch_size=100, dimension=50, learning_rate=0.001, margin=2.0, norm="L1"):
+    def __init__(self, kg=KG(), epochs=100, batch_size=50, dimension=50, learning_rate=0.01, margin=2.0, norm="L1"):
         self.kg = kg
         self.epochs = epochs
         self.batch_size = batch_size
@@ -23,6 +23,7 @@ class BaseModel(metaclass=ABCMeta):
         # 总的样本数，用于计算平均loss
         self.total_sample_count = 0
 
+    @time_it
     def train(self, ):
         self._init_embeddings()
         batch_count = int(len(self.kg.train_quads) / self.batch_size)
