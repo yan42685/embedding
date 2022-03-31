@@ -21,7 +21,8 @@ df1 = df1.drop(columns=["meta_fact_id", "fact_id", "verb", "useless1", "useless3
 # 合并facts和date_facts
 # 数据集类型1: 大部分关系都有很强的时间顺序
 time_sensitive_relations = {"<wasBornIn>", "<isAffiliatedTo>", "<hasWonPrize>", "<diedIn>", "<hasChild>",
-                            "<graduatedFrom>", "<isMarriedTo>", "<worksAt>", "<directed>", "<isLeaderOf>"}
+                            "<graduatedFrom>", "<isMarriedTo>", "<worksAt>", "<directed>", "<isLeaderOf>",
+                            "<isPoliticianOf>", "<actedIn>", "<wroteMusicFor>"}
 
 df2 = facts_df.loc[facts_df["relation"].isin(time_sensitive_relations)]
 df2 = pd.merge(df2, date_facts_df.drop(columns=["relation"]), on="head")
@@ -34,6 +35,7 @@ df3 = pd.concat([df1, df2])
 df3 = df3.dropna()
 df3 = df3.drop_duplicates()
 
-counts = df3['head'].value_counts(sort=False)
-# 头实体重复出现次数大于等于threshold的quad
-df4 = df3[df3['head'].isin(counts.index[counts >= 40])]
+head_counts = df3["head"].value_counts(sort=False)
+df4 = df3[df3["head"].isin(head_counts.index[head_counts > 25])]
+tail_counts = df4["tail"].value_counts(sort=False)
+df4 = df4[df4["tail"].isin(tail_counts.index[tail_counts > 25])]

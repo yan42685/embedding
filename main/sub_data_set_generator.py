@@ -36,7 +36,6 @@ class SubDataSetGenerator:
         self._output_data(self.mixed_output_dir, self.mixed_quads)
         print("Generating complete")
 
-
     def _extract_quads(self):
         facts_df = pd.read_csv(self.facts_path, header=None, sep=self.sep)
         date_facts_df = pd.read_csv(self.date_facts_path, header=None, sep=self.sep)
@@ -53,11 +52,12 @@ class SubDataSetGenerator:
         # 合并facts和date_facts
         # 数据集类型1: 大部分关系都有很强的时间顺序
         time_sensitive_relations = {"<wasBornIn>", "<isAffiliatedTo>", "<hasWonPrize>", "<diedIn>", "<hasChild>",
-                                    "<graduatedFrom>", "<isMarriedTo>", "<worksAt>", "<directed>", "<isLeaderOf>"}
+                                    "<graduatedFrom>", "<isMarriedTo>", "<worksAt>", "<directed>", "<isLeaderOf>",
+                                    "<isPoliticianOf>", "<actedIn>", "<wroteMusicFor>"}
 
         df2 = facts_df.loc[facts_df["relation"].isin(time_sensitive_relations)]
         df2 = pd.merge(df2, date_facts_df.drop(columns=["relation"]), on="head")
-        # [下面这行注释代码表示 数据集类型2]: 少部分关系有很强的时间顺序 threshold 取200
+        # [下面被注释的一行] 数据集类型2: 少部分关系有很强的时间顺序
         # df2 = pd.merge(facts_df, date_facts_df.drop(columns=["relation"]), on="head")
         df2 = df2.drop(columns=["date_fact_id", "fact_id", "useless1", "useless2"])
 
@@ -66,9 +66,10 @@ class SubDataSetGenerator:
         df3 = df3.dropna()
         df3 = df3.drop_duplicates()
 
-        counts = df3['head'].value_counts(sort=False)
-        # 头实体重复出现次数大于等于threshold的quad
-        df4 = df3[df3['head'].isin(counts.index[counts >= self.threshold])]
+        head_counts = df3["head"].value_counts(sort=False)
+        df4 = df3[df3["head"].isin(head_counts.index[head_counts > 25])]
+        tail_counts = df4["tail"].value_counts(sort=False)
+        df4 = df4[df4["tail"].isin(tail_counts.index[tail_counts > 25])]
         self.all_quads = list(df4.itertuples(index=False, name=None))
 
     def _filter_quads(self):
