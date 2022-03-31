@@ -1,14 +1,14 @@
 from tools import generate_initial_vector, scale_to_unit_length
 import numpy as np
 from abc import ABCMeta, abstractmethod
-from tf_model.evaluator import Evaluator
-from tf_model.KG import KG
+from raw_model.evaluator import Evaluator
+from raw_model.KG import KG
 import time
 import random
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, kg=KG(), epochs=100, batch_size=100, dimension=100, learning_rate=0.001, margin=4.0, norm=1):
+    def __init__(self, kg=KG(), epochs=1, batch_size=100, dimension=50, learning_rate=0.001, margin=2.0, norm="L1"):
         self.kg = kg
         self.epochs = epochs
         self.batch_size = batch_size
@@ -45,7 +45,8 @@ class BaseModel(metaclass=ABCMeta):
             print("average loss: %.6f" % (self.total_loss / self.total_sample_count))
             print()
 
-        Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.test_quads, norm=self.norm).evaluate()
+        Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.test_quads, self.kg.all_quads,
+                  norm=self.norm).evaluate()
         # self._output_result(data_set_name, batch_size)
 
     def _init_embeddings(self):

@@ -7,5 +7,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # main("word_net")
     main()

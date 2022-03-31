@@ -20,7 +20,7 @@ class TransE(BaseModel):
                 negative_tail = self.entity_embeddings[negative_sample[2]]
 
                 # 计算向量之间的距离
-                if self.norm == 1:
+                if self.norm == "L1":
                     positive_distance = norm_l1(positive_head + relation - positive_tail)
                     negative_distance = norm_l1(negative_head + relation - negative_tail)
 
@@ -37,7 +37,7 @@ class TransE(BaseModel):
                     negative_gradient = 2 * (negative_head + relation - negative_tail)
 
                     # 如果是L1范式再改变梯度的具体值
-                    if self.norm == 1:
+                    if self.norm == "L1":
                         for i in range(len(positive_gradient)):
                             if positive_gradient[i] > 0:
                                 positive_gradient[i] = 1

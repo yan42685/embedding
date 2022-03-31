@@ -1,6 +1,6 @@
-from tf_model.KG import KG
+from raw_model.KG import KG
 from abc import ABCMeta, abstractmethod
-from tf_model.evaluator import Evaluator
+from raw_model.evaluator import Evaluator
 from tools import time_it
 import time
 import tensorflow as tf
@@ -52,7 +52,8 @@ class BaseModel(metaclass=ABCMeta):
             print("epoch: ", epoch + 1, "  cost time: %.3fs" % (end_time - start_time))
             print("total loss: %.6f, average loss: %.6f" % (self.total_loss, self.total_loss / self.total_sample_count))
             print()
-        Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.test_quads, norm=self.norm).evaluate()
+        Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.test_quads, self.kg.all_quads,
+                  norm=self.norm).evaluate()
 
     def _init_embedding(self):
         bound = 6 / math.sqrt(self.embedding_dim)
