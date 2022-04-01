@@ -1,24 +1,67 @@
 from tools import norm_l1, norm_l2, time_it
+import random
+import numpy as np
 
 
 # 评估模型训练的效果
 
 class Evaluator:
-    def __init__(self, entity_embeddings, relation_embeddings, all_quads, test_quads, norm="L1"):
+    def __init__(self, entity_embeddings, relation_embeddings, all_quads, train_quads, test_quads, norm, epsilon):
         self.entity_embeddings = entity_embeddings
         self.entity_count = len(entity_embeddings)
         self.relation_embeddings = relation_embeddings
         self.relation_count = len(relation_embeddings)
         self.all_quads_set = set(all_quads)
+        self.train_quads = train_quads
         self.test_quads = test_quads
         self.norm = norm
+        self.epsilon = epsilon
 
     def evaluate(self):
         print("Start evaluating...")
-        self._link_predication()
+        self._triple_classification()
+        # self._link_predication()
 
-    def triple_classification(self):
-        pass
+    @time_it
+    def _triple_classification(self):
+        test_heads = set()
+        test_tails = set()
+        # TODO: 不确定这里该选all_quads 还是别的, 可能导致三元组分类的准确率不符合实际值
+        for (h, r, t, d) in self.all_quads_set:
+            test_heads.add(h)
+            test_tails.add(t)
+        test_heads = list(test_heads)
+        test_tails = list(test_tails)
+
+        corrupted_quads = []
+        # 随机替换正例头实体或尾实体, 得到对应的一个负例
+        # TODO: corrupted_quads应该来自validation和test
+        for (head, relation, tail, date) in self.test_quads:
+            random_choice = np.random.random()
+            if random_choice <= 0.5:
+                # 只选取出现在那个位置的实体
+                head = random.choice(test_heads)
+            else:
+                tail = random.choice(test_tails)
+            corrupted_quads.append((head, relation, tail, date))
+
+        train_quads_distances = []
+        for (h, r, t, d) in self.train_quads:
+            trained_distance = self.entity_embeddings[h] + self.relation_embeddings[r] - self.entity_embeddings[t]
+            train_quads_distances.append(self._get_distance(trained_distance))
+        train_quads_distances.sort()
+        # 决定是否为正确的三元组的距离界限
+        threshold = train_quads_distances[int(self.epsilon * len(train_quads_distances))]
+        correct_prediction_count = 0
+
+        for (h, r, t, d) in corrupted_quads:
+            distance = self._get_distance(
+                self.entity_embeddings[h] + self.relation_embeddings[r] - self.entity_embeddings[t])
+            condition1 = distance <= threshold and (h, r, t, d) in self.all_quads_set
+            condition2 = distance > threshold and (h, r, t, d) not in self.all_quads_set
+            if condition1 or condition2:
+                correct_prediction_count += 1
+        print("Triple classification accuracy: %.2f%%\n" % (100 * correct_prediction_count / len(self.test_quads)))
 
     @time_it
     def _link_predication(self):

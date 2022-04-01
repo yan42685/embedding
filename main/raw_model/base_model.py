@@ -8,7 +8,8 @@ import random
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, kg_dir, epochs=40, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0, norm="L1",
+    def __init__(self, kg_dir, epochs=1, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0, norm="L1",
+                 epsilon=0.9,
                  evaluation_mode="validation"):
         self.kg = KG(directory=kg_dir)
         self.epochs = epochs
@@ -17,6 +18,7 @@ class BaseModel(metaclass=ABCMeta):
         self.learning_rate = learning_rate
         self.margin = margin
         self.norm = norm
+        self.epsilon = epsilon
         self.evaluation_mode = evaluation_mode
 
         self.entity_embeddings = []
@@ -81,11 +83,11 @@ class BaseModel(metaclass=ABCMeta):
 
     def _evaluate(self):
         if self.evaluation_mode == "validation":
-            Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.all_quads,
-                      self.kg.validation_quads, norm=self.norm).evaluate()
+            Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.all_quads, self.kg.train_quads,
+                      self.kg.validation_quads, self.norm, self.epsilon).evaluate()
         elif self.evaluation_mode == "test":
-            Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.all_quads,
-                      self.kg.test_quads, norm=self.norm).evaluate()
+            Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.all_quads, self.kg.train_quads,
+                      self.kg.test_quads, self.norm, self.epsilon).evaluate()
         else:
             raise RuntimeError("wrong evaluation_mode")
 
