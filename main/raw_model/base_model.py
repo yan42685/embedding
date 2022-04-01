@@ -7,7 +7,6 @@ import time
 import random
 
 
-
 class BaseModel(metaclass=ABCMeta):
     def __init__(self, kg=KG(), epochs=40, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0, norm="L1"):
         self.kg = kg
@@ -25,10 +24,10 @@ class BaseModel(metaclass=ABCMeta):
         self.total_sample_count = 0
 
     @time_it
-    def train(self, ):
+    def train(self):
+        self._print_hyper_parameters()
         self._init_embeddings()
         batch_count = int(len(self.kg.train_quads) / self.batch_size)
-        print("batch size: ", self.batch_size)
         for epoch in range(self.epochs):
             start_time = time.time()
             self.total_loss = 0.0
@@ -81,3 +80,6 @@ class BaseModel(metaclass=ABCMeta):
     def _update_embeddings(self, positive_samples, negative_samples):
         pass
 
+    def _print_hyper_parameters(self):
+        print("epochs=%d, batch_size=%d, dimension=%d, learning_rate=%.4f, margin=%.1f, norm=%s\n" % (
+        self.epochs, self.batch_size, self.dimension, self.learning_rate, self.margin, self.norm))
