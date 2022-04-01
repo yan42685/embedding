@@ -38,14 +38,12 @@ class Evaluator:
             raw_h_correct_rank_sum += a
             raw_h_hits10_count += b
             raw_r_correct_rank_sum += c
-            print("Raw relation correct rank: %d" % c)
             raw_r_hits1_count += d
             raw_t_correct_rank_sum += e
             raw_t_hits10_count += f
             filter_h_correct_rank_sum += g
             filter_h_hits10_count += h
             filter_r_correct_rank_sum += i
-            print("Filter relation correct rank: %d" % c)
             filter_r_hits1_count += j
             filter_t_correct_rank_sum += k
             filter_t_hits10_count += l
@@ -109,8 +107,6 @@ class Evaluator:
 
         h_sorted_ids = sorted(list(range(self.entity_count)), key=lambda x: h_predict_distances[x])
         r_sorted_ids = sorted(list(range(self.relation_count)), key=lambda x: r_predict_distances[x])
-        print(self.relation_count)
-        print("relation_sorted_ids: %s" % r_sorted_ids)
         t_sorted_ids = sorted(list(range(self.entity_count)), key=lambda x: t_predict_distances[x])
 
         return h_sorted_ids, r_sorted_ids, t_sorted_ids
