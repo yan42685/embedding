@@ -1,8 +1,12 @@
 from raw_model.transE import TransE
+from pathlib import Path
+from raw_model.KG import KG
 
 
 def main():
-    model = TransE()
+    directory = Path.cwd().parent.joinpath("target/YG15K")
+    kg = KG(directory=directory)
+    model = TransE(kg=kg, epochs=1, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0, norm="L1")
     model.train()
 
 

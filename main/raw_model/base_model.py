@@ -7,8 +7,9 @@ import time
 import random
 
 
+
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, kg=KG(), epochs=40, batch_size=50, dimension=50, learning_rate=0.01, margin=2.0, norm="L1"):
+    def __init__(self, kg=KG(), epochs=40, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0, norm="L1"):
         self.kg = kg
         self.epochs = epochs
         self.batch_size = batch_size
@@ -54,7 +55,7 @@ class BaseModel(metaclass=ABCMeta):
         for _ in range(len(self.kg.entity_ids)):
             self.entity_embeddings.append(generate_initial_vector(self.dimension))
 
-        for _ in range(len(self.kg.entity_ids)):
+        for _ in range(len(self.kg.relation_ids)):
             self.relation_embeddings.append(scale_to_unit_length(generate_initial_vector(self.dimension)))
 
     def _generate_pos_neg_batch(self, batch_size):
@@ -80,25 +81,3 @@ class BaseModel(metaclass=ABCMeta):
     def _update_embeddings(self, positive_samples, negative_samples):
         pass
 
-    # def _output_result(self, data_set_name, batch_size):
-    #     data_set_name = data_set_name + "_"
-    #     target_dir = "target/"
-    #     if not os.path.exists(target_dir):
-    #         os.mkdir(target_dir)
-    #
-    #     with codecs.open(
-    #             target_dir + data_set_name + "transe_entity_" + str(self.dimension) + "dim_batch" + str(batch_size),
-    #             "w") as file1:
-    #
-    #         for e in self.entity_vector_dict.keys():
-    #             file1.write(e + "\t")
-    #             file1.write(str(list(self.entity_vector_dict[e])))
-    #             file1.write("\n")
-    #
-    #     with codecs.open(
-    #             target_dir + data_set_name + "transe_relation_" + str(self.dimension) + "dim_batch" + str(batch_size),
-    #             "w") as file2:
-    #         for r in self.relation_vector_dict.keys():
-    #             file2.write(r + "\t")
-    #             file2.write(str(list(self.relation_vector_dict[r])))
-    #             file2.write("\n")
