@@ -15,6 +15,8 @@ class BaseModel(metaclass=ABCMeta):
         self.epochs = epochs
         self.batch_size = batch_size
         self.dimension = dimension
+        # 用于后续打印超参数，只记录learning_rate的话，最后打印的不是初始值
+        self.initial_learning_rate = learning_rate
         self.learning_rate = learning_rate
         self.margin = margin
         self.norm = norm
@@ -92,6 +94,6 @@ class BaseModel(metaclass=ABCMeta):
             raise RuntimeError("wrong evaluation_mode")
 
         print(
-            "epochs=%d, batch_size=%d, dimension=%d, learning_rate=%.4f, margin=%.1f, norm=%s, evaluation_mode=%s\n" % (
-                self.epochs, self.batch_size, self.dimension, self.learning_rate, self.margin, self.norm,
-                self.evaluation_mode))
+            "epochs=%d, batch_size=%d, dimension=%d, learning_rate=%.4f, margin=%.1f, norm=%s, " % (
+                self.epochs, self.batch_size, self.dimension, self.initial_learning_rate, self.margin, self.norm,))
+        print("epsilon=%.2f, evaluation_mode=%s" % (self.epsilon, self.evaluation_mode))
