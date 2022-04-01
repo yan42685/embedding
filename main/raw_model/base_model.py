@@ -8,7 +8,8 @@ import random
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, kg=KG(), epochs=40, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0, norm="L1"):
+    def __init__(self, kg=KG(), epochs=40, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0, norm="L1",
+                 evaluation_mode="validation"):
         self.kg = kg
         self.epochs = epochs
         self.batch_size = batch_size
@@ -16,6 +17,7 @@ class BaseModel(metaclass=ABCMeta):
         self.learning_rate = learning_rate
         self.margin = margin
         self.norm = norm
+        self.evaluation_mode = evaluation_mode
 
         self.entity_embeddings = []
         self.relation_embeddings = []
@@ -25,7 +27,6 @@ class BaseModel(metaclass=ABCMeta):
 
     @time_it
     def train(self):
-        self._print_hyper_parameters()
         self._init_embeddings()
         batch_count = int(len(self.kg.train_quads) / self.batch_size)
         for epoch in range(self.epochs):
@@ -46,9 +47,7 @@ class BaseModel(metaclass=ABCMeta):
             print("average loss: %.6f" % (self.total_loss / self.total_sample_count))
             print()
 
-        Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.test_quads, self.kg.all_quads,
-                  norm=self.norm).evaluate()
-        # self._output_result(data_set_name, batch_size)
+        self._evaluate()
 
     def _init_embeddings(self):
         for _ in range(len(self.kg.entity_ids)):
@@ -80,6 +79,17 @@ class BaseModel(metaclass=ABCMeta):
     def _update_embeddings(self, positive_samples, negative_samples):
         pass
 
-    def _print_hyper_parameters(self):
-        print("epochs=%d, batch_size=%d, dimension=%d, learning_rate=%.4f, margin=%.1f, norm=%s\n" % (
-            self.epochs, self.batch_size, self.dimension, self.learning_rate, self.margin, self.norm))
+    def _evaluate(self):
+        if self.evaluation_mode == "validation":
+            Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.all_quads,
+                      self.kg.validation_quads, norm=self.norm).evaluate()
+        elif self.evaluation_mode == "test":
+            Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.all_quads,
+                      self.kg.test_quads, norm=self.norm).evaluate()
+        else:
+            raise RuntimeError("wrong evaluation_mode")
+
+        print(
+            "epochs=%d, batch_size=%d, dimension=%d, learning_rate=%.4f, margin=%.1f, norm=%s, evaluation_mode=%s\n" % (
+                self.epochs, self.batch_size, self.dimension, self.learning_rate, self.margin, self.norm,
+                self.evaluation_mode))

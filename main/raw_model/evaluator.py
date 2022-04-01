@@ -4,22 +4,24 @@ from tools import norm_l1, norm_l2, time_it
 # 评估模型训练的效果
 
 class Evaluator:
-    def __init__(self, entity_embeddings, relation_embeddings, test_quads, all_quads, norm="L1"):
+    def __init__(self, entity_embeddings, relation_embeddings, all_quads, test_quads, norm="L1"):
         self.entity_embeddings = entity_embeddings
         self.entity_count = len(entity_embeddings)
         self.relation_embeddings = relation_embeddings
         self.relation_count = len(relation_embeddings)
-        self.test_quads = test_quads
         self.all_quads_set = set(all_quads)
+        self.test_quads = test_quads
         self.norm = norm
 
     def evaluate(self):
         print("Start evaluating...")
-        self._calculate_mean_rank_and_hits10()
+        self._link_predication()
 
-    # 大概三分钟
+    def triple_classification(self):
+        pass
+
     @time_it
-    def _calculate_mean_rank_and_hits10(self):
+    def _link_predication(self):
         raw_h_correct_rank_sum = 0
         raw_h_hits10_count = 0
         raw_r_correct_rank_sum = 0
