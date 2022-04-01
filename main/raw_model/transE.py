@@ -5,8 +5,6 @@ from tools import norm_l1, norm_l2, scale_to_unit_length
 
 class TransE(BaseModel):
     def _update_embeddings(self, positive_samples, negative_samples):
-        copy_entity_embeddings = copy.copy(self.entity_embeddings)
-        copy_relation_embeddings = copy.copy(self.entity_embeddings)
         self.total_sample_count += len(positive_samples) * len(negative_samples)
 
         for positive_sample in positive_samples:
@@ -69,16 +67,13 @@ class TransE(BaseModel):
                     relation += self.learning_rate * negative_gradient
 
                     # 将正例头尾实体新的向量表示放缩到单位长度, 并替换原来的向量表示
-                    copy_entity_embeddings[positive_sample[0]] = scale_to_unit_length(positive_head)
-                    copy_entity_embeddings[positive_sample[2]] = scale_to_unit_length(positive_tail)
+                    self.entity_embeddings[positive_sample[0]] = scale_to_unit_length(positive_head)
+                    self.entity_embeddings[positive_sample[2]] = scale_to_unit_length(positive_tail)
                     # 将负例中被替换的头实体或尾实体的新向量表示放缩到单位长度, 并替换原来的向量表示
                     if positive_sample[0] != negative_sample[0]:
-                        copy_entity_embeddings[negative_sample[0]] = scale_to_unit_length(negative_head)
+                        self.entity_embeddings[negative_sample[0]] = scale_to_unit_length(negative_head)
                     elif positive_sample[2] != negative_sample[2]:
-                        copy_entity_embeddings[negative_sample[2]] = scale_to_unit_length(negative_tail)
+                        self.entity_embeddings[negative_sample[2]] = scale_to_unit_length(negative_tail)
 
                     # TransE论文提到关系的向量表示不用缩放到单位长度
-                    copy_relation_embeddings[positive_sample[1]] = relation
-
-        self.entity_embeddings = copy_entity_embeddings
-        self.relation_embeddings = copy_relation_embeddings
+                    self.relation_embeddings[positive_sample[1]] = relation
