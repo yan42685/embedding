@@ -87,30 +87,6 @@ class Evaluator:
         print("MeanRank: %.1f, Hits@1: %.3f%%" % (filter_r_correct_rank_sum / test_quads_count,
                                                   100 * filter_r_hits1_count / test_quads_count))
 
-    # 按预测距离排序实体id
-    def _calculate_sorted_ids_by_prediction_distance(self, test_quad):
-        h = self.entity_embeddings[test_quad[0]]
-        r = self.relation_embeddings[test_quad[1]]
-        t = self.entity_embeddings[test_quad[2]]
-        h_predict_distances = []
-        r_predict_distances = []
-        t_predict_distances = []
-
-        for i in range(self.entity_count):
-            h_predict_distance = self.entity_embeddings[i] + r - t
-            t_predict_distance = h + r - self.entity_embeddings[i]
-            h_predict_distances.append(self._get_distance(h_predict_distance))
-            t_predict_distances.append(self._get_distance(t_predict_distance))
-        for i in range(self.relation_count):
-            r_predict_distance = h + self.relation_embeddings[i] - t
-            r_predict_distances.append(self._get_distance(r_predict_distance))
-
-        h_sorted_ids = sorted(list(range(self.entity_count)), key=lambda x: h_predict_distances[x])
-        r_sorted_ids = sorted(list(range(self.relation_count)), key=lambda x: r_predict_distances[x])
-        t_sorted_ids = sorted(list(range(self.entity_count)), key=lambda x: t_predict_distances[x])
-
-        return h_sorted_ids, r_sorted_ids, t_sorted_ids
-
     def _calculate_rank_data(self, test_quad):
         raw_h_correct_rank = 1
         raw_h_hits10 = 0
@@ -166,6 +142,30 @@ class Evaluator:
 
         return raw_h_correct_rank, raw_h_hits10, raw_r_correct_rank, raw_r_hits1, raw_t_correct_rank, raw_t_hits10, \
                filter_h_correct_rank, filter_h_hits10, filter_r_correct_rank, filter_r_hits1, filter_t_correct_rank, filter_t_hits10
+
+    # 按预测距离排序实体id
+    def _calculate_sorted_ids_by_prediction_distance(self, test_quad):
+        h = self.entity_embeddings[test_quad[0]]
+        r = self.relation_embeddings[test_quad[1]]
+        t = self.entity_embeddings[test_quad[2]]
+        h_predict_distances = []
+        r_predict_distances = []
+        t_predict_distances = []
+
+        for i in range(self.entity_count):
+            h_predict_distance = self.entity_embeddings[i] + r - t
+            t_predict_distance = h + r - self.entity_embeddings[i]
+            h_predict_distances.append(self._get_distance(h_predict_distance))
+            t_predict_distances.append(self._get_distance(t_predict_distance))
+        for i in range(self.relation_count):
+            r_predict_distance = h + self.relation_embeddings[i] - t
+            r_predict_distances.append(self._get_distance(r_predict_distance))
+
+        h_sorted_ids = sorted(list(range(self.entity_count)), key=lambda x: h_predict_distances[x])
+        r_sorted_ids = sorted(list(range(self.relation_count)), key=lambda x: r_predict_distances[x])
+        t_sorted_ids = sorted(list(range(self.entity_count)), key=lambda x: t_predict_distances[x])
+
+        return h_sorted_ids, r_sorted_ids, t_sorted_ids
 
     def _get_distance(self, vector):
         if self.norm == "L1":

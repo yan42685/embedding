@@ -82,4 +82,4 @@ class BaseModel(metaclass=ABCMeta):
 
     def _print_hyper_parameters(self):
         print("epochs=%d, batch_size=%d, dimension=%d, learning_rate=%.4f, margin=%.1f, norm=%s\n" % (
-        self.epochs, self.batch_size, self.dimension, self.learning_rate, self.margin, self.norm))
+            self.epochs, self.batch_size, self.dimension, self.learning_rate, self.margin, self.norm))
