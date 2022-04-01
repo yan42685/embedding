@@ -85,10 +85,10 @@ class BaseModel(metaclass=ABCMeta):
 
     def _evaluate(self):
         if self.evaluation_mode == "validation":
-            Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.all_quads, self.kg.train_quads,
+            Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.train_quads,
                       self.kg.validation_quads, self.norm, self.epsilon).evaluate()
         elif self.evaluation_mode == "test":
-            Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.all_quads, self.kg.train_quads,
+            Evaluator(self.entity_embeddings, self.relation_embeddings, self.kg.train_quads,
                       self.kg.test_quads, self.norm, self.epsilon).evaluate()
         else:
             raise RuntimeError("wrong evaluation_mode")

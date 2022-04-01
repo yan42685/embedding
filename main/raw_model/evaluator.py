@@ -6,12 +6,12 @@ import numpy as np
 # 评估模型训练的效果
 
 class Evaluator:
-    def __init__(self, entity_embeddings, relation_embeddings, all_quads, train_quads, test_quads, norm, epsilon):
+    def __init__(self, entity_embeddings, relation_embeddings, train_quads, test_quads, norm, epsilon):
         self.entity_embeddings = entity_embeddings
         self.entity_count = len(entity_embeddings)
         self.relation_embeddings = relation_embeddings
         self.relation_count = len(relation_embeddings)
-        self.all_quads_set = set(all_quads)
+        self.all_quads_set = set(train_quads) | set(test_quads)
         self.train_quads = train_quads
         self.test_quads = test_quads
         self.norm = norm
@@ -20,13 +20,12 @@ class Evaluator:
     def evaluate(self):
         print("Start evaluating...")
         self._triple_classification()
-        # self._link_predication()
+        self._link_predication()
 
     @time_it
     def _triple_classification(self):
         test_heads = set()
         test_tails = set()
-        # TODO: 不确定这里该选all_quads 还是别的, 可能导致三元组分类的准确率不符合实际值
         for (h, r, t, d) in self.all_quads_set:
             test_heads.add(h)
             test_tails.add(t)
@@ -35,7 +34,6 @@ class Evaluator:
 
         corrupted_quads = []
         # 随机替换正例头实体或尾实体, 得到对应的一个负例
-        # TODO: corrupted_quads应该来自validation和test
         for (head, relation, tail, date) in self.test_quads:
             random_choice = np.random.random()
             if random_choice <= 0.5:
