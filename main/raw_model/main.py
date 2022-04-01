@@ -4,9 +4,8 @@ from raw_model.KG import KG
 
 
 def main():
-    directory = Path.cwd().parent.joinpath("target/YG30K")
-    kg = KG(directory=directory)
-    model = TransE(kg=kg, epochs=1, batch_size=50, dimension=50, learning_rate=0.001, margin=4.0, norm="L1",
+    kg_dir = Path.cwd().parent.joinpath("target/YG30K")
+    model = TransE(kg_dir=kg_dir, epochs=40, batch_size=100, dimension=100, learning_rate=0.001, margin=4.0, norm="L1",
                    evaluation_mode="validation")
     model.train()
 
