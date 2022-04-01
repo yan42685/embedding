@@ -67,9 +67,9 @@ class SubDataSetGenerator:
         df3 = df3.drop_duplicates()
 
         head_counts = df3["head"].value_counts(sort=False)
-        df4 = df3[df3["head"].isin(head_counts.index[head_counts > 25])]
-        tail_counts = df4["tail"].value_counts(sort=False)
-        df4 = df4[df4["tail"].isin(tail_counts.index[tail_counts > 25])]
+        df4 = df3[df3["head"].isin(head_counts.index[head_counts >= 90])]
+        # tail_counts = df4["tail"].value_counts(sort=False)
+        # df4 = df4[df4["tail"].isin(tail_counts.index[tail_counts > 25])]
         self.all_quads = list(df4.itertuples(index=False, name=None))
 
     def _filter_quads(self):
