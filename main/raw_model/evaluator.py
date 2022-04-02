@@ -59,7 +59,7 @@ class Evaluator:
             condition2 = distance > threshold and (h, r, t, d) not in self.all_quads_set
             if condition1 or condition2:
                 correct_prediction_count += 1
-        print("Triple classification accuracy: %.2f%%\n" % (100 * correct_prediction_count / len(self.test_quads)))
+        print("Triple classification accuracy: %.2f%%" % (100 * correct_prediction_count / len(self.test_quads)))
 
     @time_it
     def _link_predication(self):
@@ -124,8 +124,6 @@ class Evaluator:
         print("-----Raw-----")
         print("MeanRank: %.1f, Hits@1: %.3f%%" % (raw_r_correct_rank_sum / test_quads_count,
                                                   100 * raw_r_hits1_count / test_quads_count))
-
-        print()
         print("-----Filter-----")
         print("MeanRank: %.1f, Hits@1: %.3f%%" % (filter_r_correct_rank_sum / test_quads_count,
                                                   100 * filter_r_hits1_count / test_quads_count))
