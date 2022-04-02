@@ -11,9 +11,14 @@ def main():
     #                epsilon=0.9,
     #                evaluation_mode="validation")
 
-    model = TransE(kg_dir=Path.cwd().parent.joinpath("target/YG15K"))
+    # model = TransE(kg_dir=Path.cwd().parent.joinpath("target/YG15K"))
 
     # model = TransH(kg_dir=kg_dir)
+
+    model = TimeTransE(kg_dir=kg_dir, epochs=1, batch_size=100, dimension=100, learning_rate=0.001, margin=4.0,
+                       norm="L1",
+                       epsilon=0.9,
+                       evaluation_mode="validation", k=0.01)
 
     # model = TimeTransE(kg_dir=kg_dir)
     model.train()

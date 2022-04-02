@@ -5,8 +5,11 @@ import numpy as np
 
 
 class TimeTransE(BaseModel):
-    def __init__(self, kg_dir, k=0.01):
-        super().__init__(kg_dir)
+    def __init__(self, kg_dir, epochs=1, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0, norm="L1",
+                 epsilon=0.9,
+                 evaluation_mode="validation", k=0.01):
+        super().__init__(kg_dir, epochs=epochs, batch_size=batch_size, dimension=dimension, learning_rate=learning_rate,
+                         margin=margin, norm=norm, epsilon=epsilon, evaluation_mode=evaluation_mode)
         self.k = k
         self.matrix = np.random.rand(self.dimension, self.dimension)
         # 每个头实体对应的(ri, rj)时序关系对集合
@@ -91,14 +94,40 @@ class TimeTransE(BaseModel):
                         r2_embedding = self.relation_embeddings[r2]
                         r3_embedding = self.relation_embeddings[r3]
                         r4_embedding = self.relation_embeddings[r4]
-                        pos_distance = get_distance(np.dot(r1_embedding, self.matrix) - r2_embedding, self.norm)
-                        neg_distance = get_distance(np.dot(r3_embedding, self.matrix) - r4_embedding, self.norm)
-                        loss2_step = max(self.margin + pos_distance - neg_distance, 0)
-                        # 只更新正值
+                        pos_distance_vec = np.dot(r1_embedding, self.matrix) - r2_embedding
+                        neg_distance_vec = np.dot(r3_embedding, self.matrix) - r4_embedding
+                        pos_distance = get_distance(pos_distance_vec, self.norm)
+                        neg_distance = get_distance(neg_distance_vec, self.norm)
+                        loss2_step = self.k * max(self.margin + pos_distance - neg_distance, 0)
+                        loss2 += loss2_step
+                        # 只在loss为正时更新向量表示
                         if loss2_step > 0:
-                            pass
+                            pos_gradient = 2 * self.k * pos_distance_vec
+                            neg_gradient = 2 * self.k * neg_distance_vec
 
-                self.total_loss += loss1 + self.k * loss2
+                            # 如果是L1范式再改变梯度的具体值
+                            if self.norm == "L1":
+                                for i in range(len(pos_gradient)):
+                                    if pos_gradient[i] > 0:
+                                        pos_gradient[i] = self.k
+                                    else:
+                                        pos_gradient[i] = -self.k
+
+                                    if neg_gradient[i] > 0:
+                                        neg_gradient[i] = self.k
+                                    else:
+                                        neg_gradient[i] = -self.k
+
+                            r1_embedding -= self.learning_rate * pos_gradient
+                            r2_embedding += self.learning_rate * pos_gradient
+                            r3_embedding += self.learning_rate * neg_gradient
+                            r4_embedding -= self.learning_rate * neg_gradient
+                            self.relation_embeddings[r1] = r1_embedding
+                            self.relation_embeddings[r2] = r2_embedding
+                            self.relation_embeddings[r3] = r3_embedding
+                            self.relation_embeddings[r4] = r4_embedding
+
+                self.total_loss += loss1 + loss2
 
     def _generate_relation_pairs(self):
         # 过滤出头实体相同且有时间标记的四元组
