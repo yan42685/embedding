@@ -1,5 +1,5 @@
 from raw_model.base_model import BaseModel
-from tools import generate_initial_vector
+from tools import generate_initial_vector, scale_to_unit_length
 import random
 from collections import defaultdict
 import math
@@ -22,11 +22,105 @@ class TransH(BaseModel):
         for _ in range(len(self.kg.entity_ids)):
             self.entity_embeddings.append(generate_initial_vector(self.dimension))
         for _ in range(len(self.kg.relation_ids)):
-            self.relation_normal_embeddings.append(generate_initial_vector(self.dimension))
-            self.relation_hyper_embeddings.append(generate_initial_vector(self.dimension))
+            self.relation_normal_embeddings.append(scale_to_unit_length(generate_initial_vector(self.dimension)))
+            self.relation_hyper_embeddings.append(scale_to_unit_length(generate_initial_vector(self.dimension)))
 
     def _update_embeddings(self, positive_samples, negative_samples):
-        pass
+        self.total_sample_count += len(positive_samples) * len(negative_samples)
+
+        for positive_sample in positive_samples:
+            for negative_sample in negative_samples:
+
+                pos_h = self.entity_embeddings[positive_sample[0]]
+                pos_t = self.entity_embeddings[positive_sample[2]]
+                r_normal = self.relation_normal_embeddings[positive_sample[1]]
+                r_hyper = self.relation_hyper_embeddings[positive_sample[1]]
+
+                neg_h = self.entity_embeddings[negative_sample[0]]
+                neg_t = self.entity_embeddings[negative_sample[2]]
+
+                # 计算向量之间的距离
+                pos_distance = self._get_distance(pos_h, r_normal, r_hyper, pos_t)
+                neg_distance = self._get_distance(neg_h, r_normal, r_hyper, neg_t)
+
+                loss1 = self.margin + pos_distance - neg_distance
+                loss2 = _unit_constraint(pos_h, pos_t, neg_h, neg_t)
+                if loss1 > 0:
+                    self.total_loss += loss1
+                    i = np.ones(self.dimension)
+                    # 默认是L2范式
+                    pos_gradient = 2 * (pos_h - np.dot(r_normal, pos_h) * r_normal +
+                                        r_hyper - pos_t +
+                                        np.dot(r_normal, pos_t) *
+                                        r_normal) * (i - r_normal ** 2)
+                    neg_gradient = 2 * (neg_h - np.dot(r_normal, neg_h) * r_normal +
+                                        r_hyper - neg_t +
+                                        np.dot(r_normal, neg_t) *
+                                        r_normal) * (i - r_normal ** 2)
+                    normal_gradient = 2 * (pos_h - np.dot(r_normal, pos_h) * r_normal +
+                                           r_hyper - pos_t +
+                                           np.dot(r_normal, pos_t) *
+                                           r_normal) * (pos_t - pos_h) * 2 * r_normal - 2 * (
+                                              neg_h - np.dot(r_normal, neg_h) * r_normal +
+                                              r_hyper - neg_t +
+                                              np.dot(r_normal, neg_t) *
+                                              r_normal) * (neg_t - neg_h) * 2 * r_normal
+                    hyper_gradient = 2 * (pos_h - np.dot(r_normal, pos_h) * r_normal +
+                                          - pos_t + np.dot(r_normal, pos_t)
+                                          * r_normal) - 2 * (neg_h - np.dot(r_normal,
+                                                                            neg_h) * r_normal +
+                                                             - neg_t +
+                                                             np.dot(r_normal, neg_t) *
+                                                             r_normal)
+
+                    # 如果是L1范式再改变梯度的具体值
+                    if self.norm == "L1":
+                        for i in range(len(pos_gradient)):
+                            if pos_gradient[i] > 0:
+                                pos_gradient[i] = 1
+                            else:
+                                pos_gradient[i] = -1
+                            if neg_gradient[i] > 0:
+                                neg_gradient[i] = 1
+                            else:
+                                neg_gradient[i] = -1
+                            if normal_gradient[i] > 0:
+                                normal_gradient[i] = 1
+                            else:
+                                normal_gradient[i] = -1
+                            if hyper_gradient[i] > 0:
+                                hyper_gradient[i] = 1
+                            else:
+                                hyper_gradient[i] = -1
+
+                    # 损失函数希望达到的理想情况是，正例的d(h + r, t) 尽可能小，负例的d(h' + r', t') 尽可能大，
+                    # 这样才能让总体的loss趋向于0。因此在梯度下降过程中，
+                    # 正例中h和r逐渐减小，但t逐渐增大； 负例中h'和r'逐渐增大，而t'逐渐减小
+                    pos_h -= self.learning_rate * pos_gradient
+                    r_normal -= self.learning_rate * normal_gradient
+                    r_hyper -= self.learning_rate * hyper_gradient
+                    pos_t += self.learning_rate * pos_gradient
+
+                    # 如果负例替换的是头实体, 则正例的尾实体更新两次, 一次满足正例，一次满足负例
+                    if positive_sample[0] != negative_sample[0]:
+                        neg_h += self.learning_rate * neg_gradient
+                        pos_t -= self.learning_rate * neg_gradient
+                    # 如果负例替换的是尾实体, 则正例的头实体更新两次
+                    elif positive_sample[2] != negative_sample[2]:
+                        neg_t -= self.learning_rate * neg_gradient
+                        pos_h += self.learning_rate * neg_gradient
+
+                    # 将正例头尾实体新的向量表示放缩到单位长度, 并替换原来的向量表示
+                    self.entity_embeddings[positive_sample[0]] = scale_to_unit_length(pos_h)
+                    self.entity_embeddings[positive_sample[2]] = scale_to_unit_length(pos_t)
+                    # 将负例中被替换的头实体或尾实体的新向量表示放缩到单位长度, 并替换原来的向量表示
+                    if positive_sample[0] != negative_sample[0]:
+                        self.entity_embeddings[negative_sample[0]] = scale_to_unit_length(neg_h)
+                    elif positive_sample[2] != negative_sample[2]:
+                        self.entity_embeddings[negative_sample[2]] = scale_to_unit_length(neg_t)
+
+                    self.relation_normal_embeddings[positive_sample[1]] = scale_to_unit_length(r_normal)
+                    self.relation_hyper_embeddings[positive_sample[1]] = scale_to_unit_length(r_hyper)
 
     def _generate_pos_neg_batch(self, batch_size):
         """
@@ -69,6 +163,18 @@ class TransH(BaseModel):
             hpt = tail_count / head_count
             # print(tph / (tph + hpt))
             self.relation_p_dict[r] = tph / (tph + hpt)
+
+    def _get_distance(self, h, r_normal, r_hyper, t):
+        if self.norm == "L1":
+            result = np.sum(
+                np.abs(h - np.dot(r_normal, h) * r_normal + r_hyper - t + np.dot(r_normal, t) * r_normal))
+        elif self.norm == "L2":
+            result = np.sum(
+                np.square(h - np.dot(r_normal, h) * r_normal + r_hyper - t + np.dot(r_normal, t) * r_normal))
+        else:
+            raise RuntimeError("wrong norm")
+
+        return result
 
 
 # 其他实现说正交约束影响很小, 所以只报保留模长约束，舍弃正交约束
