@@ -22,7 +22,7 @@ class Evaluator:
         self._triple_classification()
         self._link_predication()
 
-    @time_it
+    # @time_it
     def _triple_classification(self):
         test_heads = set()
         test_tails = set()

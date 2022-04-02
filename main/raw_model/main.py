@@ -15,7 +15,7 @@ def main():
 
     # model = TransH(kg_dir=kg_dir)
 
-    model = TimeTransE(kg_dir=kg_dir, epochs=1, batch_size=100, dimension=100, learning_rate=0.001, margin=4.0,
+    model = TimeTransE(kg_dir=kg_dir, epochs=100, batch_size=100, dimension=100, learning_rate=0.001, margin=4.0,
                        norm="L1",
                        epsilon=0.9,
                        evaluation_mode="validation", k=0.01)

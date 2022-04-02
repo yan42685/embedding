@@ -21,8 +21,9 @@ class TimeTransE(BaseModel):
         self.total_sample_count += len(positive_samples) * len(negative_samples)
 
         for positive_sample in positive_samples:
+            loss1 = 0
+            # ================ 损失函数 ===============
             for negative_sample in negative_samples:
-                # ================ 损失函数 ===============
 
                 pos_h = self.entity_embeddings[positive_sample[0]]
                 pos_t = self.entity_embeddings[positive_sample[2]]
@@ -84,50 +85,56 @@ class TimeTransE(BaseModel):
                     # TransE论文提到关系的向量表示不用缩放到单位长度
                     self.relation_embeddings[positive_sample[1]] = r
 
-                # ===================== 正则化项 =========================
-                pos_r_pairs = self.pos_h_r_pairs_dict[positive_sample]
-                neg_r_pairs = self.neg_h_r_pairs_dict[positive_sample]
-                loss2 = 0
-                for (r1, r2) in pos_r_pairs:
-                    for (r3, r4) in neg_r_pairs:
-                        r1_embedding = self.relation_embeddings[r1]
-                        r2_embedding = self.relation_embeddings[r2]
-                        r3_embedding = self.relation_embeddings[r3]
-                        r4_embedding = self.relation_embeddings[r4]
-                        pos_distance_vec = np.dot(r1_embedding, self.matrix) - r2_embedding
-                        neg_distance_vec = np.dot(r3_embedding, self.matrix) - r4_embedding
-                        pos_distance = get_distance(pos_distance_vec, self.norm)
-                        neg_distance = get_distance(neg_distance_vec, self.norm)
-                        loss2_step = self.k * max(self.margin + pos_distance - neg_distance, 0)
-                        loss2 += loss2_step
-                        # 只在loss为正时更新向量表示
-                        if loss2_step > 0:
-                            pos_gradient = 2 * self.k * pos_distance_vec
-                            neg_gradient = 2 * self.k * neg_distance_vec
+            # ===================== 正则化项 =========================
+            loss2 = self._regularization(positive_sample)
+            self.total_loss += loss1 + loss2
 
-                            # 如果是L1范式再改变梯度的具体值
-                            if self.norm == "L1":
-                                for i in range(len(pos_gradient)):
-                                    if pos_gradient[i] > 0:
-                                        pos_gradient[i] = self.k
-                                    else:
-                                        pos_gradient[i] = -self.k
+    def _regularization(self, pos_quad):
+        h = pos_quad[0]
+        r = pos_quad[1]
+        pos_r_pairs = self.pos_h_r_pairs_dict[(h, r)]
+        neg_r_pairs = self.neg_h_r_pairs_dict[(h, r)]
+        loss = 0
+        for (r1, r2) in pos_r_pairs:
+            for (r3, r4) in neg_r_pairs:
+                r1_embedding = self.relation_embeddings[r1]
+                r2_embedding = self.relation_embeddings[r2]
+                r3_embedding = self.relation_embeddings[r3]
+                r4_embedding = self.relation_embeddings[r4]
+                pos_distance_vec = np.dot(r1_embedding, self.matrix) - r2_embedding
+                neg_distance_vec = np.dot(r3_embedding, self.matrix) - r4_embedding
+                pos_distance = get_distance(pos_distance_vec, self.norm)
+                neg_distance = get_distance(neg_distance_vec, self.norm)
+                step_loss = self.k * max(self.margin + pos_distance - neg_distance, 0)
+                loss += step_loss
+                # 只在loss为正时更新向量表示
+                if step_loss > 0:
+                    pos_gradient = 2 * self.k * pos_distance_vec
+                    neg_gradient = 2 * self.k * neg_distance_vec
 
-                                    if neg_gradient[i] > 0:
-                                        neg_gradient[i] = self.k
-                                    else:
-                                        neg_gradient[i] = -self.k
+                    # 如果是L1范式再改变梯度的具体值
+                    if self.norm == "L1":
+                        for i in range(len(pos_gradient)):
+                            if pos_gradient[i] > 0:
+                                pos_gradient[i] = self.k
+                            else:
+                                pos_gradient[i] = -self.k
 
-                            r1_embedding -= self.learning_rate * pos_gradient
-                            r2_embedding += self.learning_rate * pos_gradient
-                            r3_embedding += self.learning_rate * neg_gradient
-                            r4_embedding -= self.learning_rate * neg_gradient
-                            self.relation_embeddings[r1] = r1_embedding
-                            self.relation_embeddings[r2] = r2_embedding
-                            self.relation_embeddings[r3] = r3_embedding
-                            self.relation_embeddings[r4] = r4_embedding
+                            if neg_gradient[i] > 0:
+                                neg_gradient[i] = self.k
+                            else:
+                                neg_gradient[i] = -self.k
 
-                self.total_loss += loss1 + loss2
+                    r1_embedding -= self.learning_rate * pos_gradient
+                    r2_embedding += self.learning_rate * pos_gradient
+                    r3_embedding += self.learning_rate * neg_gradient
+                    r4_embedding -= self.learning_rate * neg_gradient
+                    self.relation_embeddings[r1] = r1_embedding
+                    self.relation_embeddings[r2] = r2_embedding
+                    self.relation_embeddings[r3] = r3_embedding
+                    self.relation_embeddings[r4] = r4_embedding
+
+        return loss
 
     def _generate_relation_pairs(self):
         # 过滤出头实体相同且有时间标记的四元组
@@ -143,8 +150,8 @@ class TimeTransE(BaseModel):
                     j = 0
                     for (h2, r2, t2, d2) in quads:
                         if i < j and r1 != r2 and d1 < d2:
-                            self.pos_h_r_pairs_dict[h1].add((r1, r2))
-                            self.neg_h_r_pairs_dict[h1].add((r2, r1))
+                            self.pos_h_r_pairs_dict[(h1, r1)].add((r1, r2))
+                            self.neg_h_r_pairs_dict[(h1, r1)].add((r2, r1))
                         j += 1
                     i += 1
         # print(len(self.pos_h_r_pairs_dict))
