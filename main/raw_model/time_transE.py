@@ -6,11 +6,10 @@ import numpy as np
 
 
 class TimeTransE(BaseModel):
-    def __init__(self, kg_dir, epochs=1, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0, norm="L1",
-                 epsilon=0.9,
-                 evaluation_mode="validation", k=0.01):
-        super().__init__(kg_dir, epochs=epochs, batch_size=batch_size, dimension=dimension, learning_rate=learning_rate,
-                         margin=margin, norm=norm, epsilon=epsilon, evaluation_mode=evaluation_mode)
+    def __init__(self, kg_dir, model_name="TimeTransE", epochs=1, batch_size=50, dimension=50, learning_rate=0.01,
+                 margin=1.0, norm="L1", epsilon=0.9, evaluation_mode="validation", k=0.01):
+        super().__init__(kg_dir, model_name, epochs, batch_size, dimension, learning_rate, margin, norm, epsilon,
+                         evaluation_mode)
         self.k = k
         self.matrix = normalize(np.random.rand(self.dimension, self.dimension), axis=1, norm="l1")
         # 每个头实体对应的(ri, rj)时序关系对集合

@@ -8,10 +8,12 @@ import random
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, kg_dir, epochs=1, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0, norm="L1",
+    def __init__(self, kg_dir, model_name, epochs=1, batch_size=50, dimension=50, learning_rate=0.01, margin=1.0,
+                 norm="L1",
                  epsilon=0.9,
                  evaluation_mode="validation"):
         self.kg = KG(directory=kg_dir)
+        self.model_name = model_name
         self.epochs = epochs
         self.batch_size = batch_size
         self.dimension = dimension
@@ -95,6 +97,11 @@ class BaseModel(metaclass=ABCMeta):
             raise RuntimeError("wrong evaluation_mode")
 
         print(
-            "epochs=%d, batch_size=%d, dimension=%d, learning_rate=%.4f, margin=%.1f, norm=%s, " % (
-                self.epochs, self.batch_size, self.dimension, self.initial_learning_rate, self.margin, self.norm,))
+            "%s epochs=%d, batch_size=%d, dimension=%d, learning_rate=%.4f, margin=%.1f, norm=%s, " % (self.model_name,
+                                                                                                       self.epochs,
+                                                                                                       self.batch_size,
+                                                                                                       self.dimension,
+                                                                                                       self.initial_learning_rate,
+                                                                                                       self.margin,
+                                                                                                       self.norm,))
         print("epsilon=%.2f, evaluation_mode=%s" % (self.epsilon, self.evaluation_mode))

@@ -4,6 +4,12 @@ from tools import scale_to_unit_length, get_distance
 
 
 class TransE(BaseModel):
+    def __init__(self, kg_dir, model_name="TransE", epochs=1, batch_size=50, dimension=50, learning_rate=0.01,
+                 margin=1.0,
+                 norm="L1", epsilon=0.9, evaluation_mode="validation"):
+        super().__init__(kg_dir, model_name, epochs, batch_size, dimension, learning_rate, margin, norm, epsilon,
+                         evaluation_mode)
+
     def _update_embeddings(self, positive_samples, negative_samples):
         self.total_sample_count += len(positive_samples) * len(negative_samples)
 

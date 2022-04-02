@@ -7,9 +7,11 @@ import numpy as np
 
 
 class TransH(BaseModel):
-    def __init__(self, kg_dir):
-        super().__init__(kg_dir)
+    def __init__(self, kg_dir, model_name="TransH", epochs=1, batch_size=50, dimension=50, learning_rate=0.01,
+                 margin=1.0, norm="L1", epsilon=0.9, evaluation_mode="validation"):
         # 储存每个关系对应的头结点预测概率
+        super().__init__(kg_dir, model_name, epochs, batch_size, dimension, learning_rate, margin, norm, epsilon,
+                         evaluation_mode)
         self.relation_p_dict = dict()
 
         self._calculate_tph_and_hpt()
