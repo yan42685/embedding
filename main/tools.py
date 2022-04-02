@@ -4,8 +4,6 @@ import time
 from pathlib import Path
 
 
-
-
 def generate_initial_vector(dimension):
     return np.random.uniform(-6.0 / np.sqrt(dimension), 6.0 / np.sqrt(dimension),
                              dimension)
@@ -19,6 +17,16 @@ def norm_l1(vector):
 # 欧氏距离
 def norm_l2(vector):
     return np.linalg.norm(vector, ord=2)
+
+
+def get_distance(vector, norm):
+    if norm == "L1":
+        result = norm_l1(vector)
+    elif norm == "L2":
+        result = norm_l2(vector)
+    else:
+        raise RuntimeError("wrong norm")
+    return result
 
 
 # 缩放到欧氏距离的单位长度
