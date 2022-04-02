@@ -1,6 +1,7 @@
 from raw_model.base_model import BaseModel
 from collections import defaultdict
 from tools import get_distance, scale_to_unit_length
+from sklearn.preprocessing import normalize
 import numpy as np
 
 
@@ -11,7 +12,7 @@ class TimeTransE(BaseModel):
         super().__init__(kg_dir, epochs=epochs, batch_size=batch_size, dimension=dimension, learning_rate=learning_rate,
                          margin=margin, norm=norm, epsilon=epsilon, evaluation_mode=evaluation_mode)
         self.k = k
-        self.matrix = np.random.rand(self.dimension, self.dimension)
+        self.matrix = normalize(np.random.rand(self.dimension, self.dimension), axis=1, norm="l1")
         # 每个头实体对应的(ri, rj)时序关系对集合
         self.pos_h_r_pairs_dict = defaultdict(set)
         self.neg_h_r_pairs_dict = defaultdict(set)
@@ -36,8 +37,9 @@ class TimeTransE(BaseModel):
                 pos_distance = get_distance(pos_h + r - pos_t, self.norm)
                 neg_distance = get_distance(neg_h + r - neg_t, self.norm)
 
-                loss1 = max(self.margin + pos_distance - neg_distance, 0)
-                if loss1 > 0:
+                step_loss1 = max(self.margin + pos_distance - neg_distance, 0)
+                loss1 += step_loss1
+                if step_loss1 > 0:
                     pos_gradient = 2 * (pos_h + r - pos_t)
                     neg_gradient = 2 * (neg_h + r - neg_t)
 
@@ -154,5 +156,5 @@ class TimeTransE(BaseModel):
                             self.neg_h_r_pairs_dict[(h1, r1)].add((r2, r1))
                         j += 1
                     i += 1
-        # print(len(self.pos_h_r_pairs_dict))
-        # print(self.pos_h_r_pairs_dict)
+        print(len(self.pos_h_r_pairs_dict))
+        print(self.pos_h_r_pairs_dict)
