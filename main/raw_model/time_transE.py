@@ -1,11 +1,14 @@
 from raw_model.base_model import BaseModel
 from collections import defaultdict
-from tools import norm_l1, norm_l2, scale_to_unit_length
+from tools import get_distance, scale_to_unit_length
+import numpy as np
 
 
 class TimeTransE(BaseModel):
-    def __init__(self, kg_dir):
+    def __init__(self, kg_dir, k=0.01):
         super().__init__(kg_dir)
+        self.k = k
+        self.matrix = np.random.rand(self.dimension, self.dimension)
         # 每个头实体对应的(ri, rj)时序关系对集合
         self.pos_h_r_pairs_dict = defaultdict(set)
         self.neg_h_r_pairs_dict = defaultdict(set)
@@ -16,74 +19,86 @@ class TimeTransE(BaseModel):
 
         for positive_sample in positive_samples:
             for negative_sample in negative_samples:
+                # ================ 损失函数 ===============
 
-                positive_head = self.entity_embeddings[positive_sample[0]]
-                positive_tail = self.entity_embeddings[positive_sample[2]]
-                relation = self.relation_embeddings[positive_sample[1]]
+                pos_h = self.entity_embeddings[positive_sample[0]]
+                pos_t = self.entity_embeddings[positive_sample[2]]
+                r = self.relation_embeddings[positive_sample[1]]
 
-                negative_head = self.entity_embeddings[negative_sample[0]]
-                negative_tail = self.entity_embeddings[negative_sample[2]]
+                neg_h = self.entity_embeddings[negative_sample[0]]
+                neg_t = self.entity_embeddings[negative_sample[2]]
 
                 # 计算向量之间的距离
-                if self.norm == "L1":
-                    positive_distance = norm_l1(positive_head + relation - positive_tail)
-                    negative_distance = norm_l1(negative_head + relation - negative_tail)
+                pos_distance = get_distance(pos_h + r - pos_t, self.norm)
+                neg_distance = get_distance(neg_h + r - neg_t, self.norm)
 
-                else:
-                    positive_distance = norm_l2(positive_head + relation - positive_tail)
-                    negative_distance = norm_l2(negative_head + relation - negative_tail)
-
-                loss = self.margin + positive_distance - negative_distance
-                if loss > 0:
-                    self.total_loss += loss
-
-                    # 默认是L2范式
-                    positive_gradient = 2 * (positive_head + relation - positive_tail)
-                    negative_gradient = 2 * (negative_head + relation - negative_tail)
+                loss1 = max(self.margin + pos_distance - neg_distance, 0)
+                if loss1 > 0:
+                    pos_gradient = 2 * (pos_h + r - pos_t)
+                    neg_gradient = 2 * (neg_h + r - neg_t)
 
                     # 如果是L1范式再改变梯度的具体值
                     if self.norm == "L1":
-                        for i in range(len(positive_gradient)):
-                            if positive_gradient[i] > 0:
-                                positive_gradient[i] = 1
+                        for i in range(len(pos_gradient)):
+                            if pos_gradient[i] > 0:
+                                pos_gradient[i] = 1
                             else:
-                                positive_gradient[i] = -1
+                                pos_gradient[i] = -1
 
-                            if negative_gradient[i] > 0:
-                                negative_gradient[i] = 1
+                            if neg_gradient[i] > 0:
+                                neg_gradient[i] = 1
                             else:
-                                negative_gradient[i] = -1
+                                neg_gradient[i] = -1
 
                     # 损失函数希望达到的理想情况是，正例的d(h + r, t) 尽可能小，负例的d(h' + r', t') 尽可能大，
                     # 这样才能让总体的loss趋向于0。因此在梯度下降过程中，
                     # 正例中h和r逐渐减小，但t逐渐增大； 负例中h'和r'逐渐增大，而t'逐渐减小
-                    positive_head -= self.learning_rate * positive_gradient
-                    positive_tail += self.learning_rate * positive_gradient
+                    pos_h -= self.learning_rate * pos_gradient
+                    pos_t += self.learning_rate * pos_gradient
 
                     # 如果负例替换的是头实体, 则正例的尾实体更新两次, 一次满足正例，一次满足负例
                     if positive_sample[0] != negative_sample[0]:
-                        negative_head += self.learning_rate * negative_gradient
-                        positive_tail -= self.learning_rate * negative_gradient
+                        neg_h += self.learning_rate * neg_gradient
+                        pos_t -= self.learning_rate * neg_gradient
                     # 如果负例替换的是尾实体, 则正例的头实体更新两次
                     elif positive_sample[2] != negative_sample[2]:
-                        negative_tail -= self.learning_rate * negative_gradient
-                        positive_head += self.learning_rate * negative_gradient
+                        neg_t -= self.learning_rate * neg_gradient
+                        pos_h += self.learning_rate * neg_gradient
 
                     # 关系永远更新两次
-                    relation -= self.learning_rate * positive_gradient
-                    relation += self.learning_rate * negative_gradient
+                    r -= self.learning_rate * pos_gradient
+                    r += self.learning_rate * neg_gradient
 
                     # 将正例头尾实体新的向量表示放缩到单位长度, 并替换原来的向量表示
-                    self.entity_embeddings[positive_sample[0]] = scale_to_unit_length(positive_head)
-                    self.entity_embeddings[positive_sample[2]] = scale_to_unit_length(positive_tail)
+                    self.entity_embeddings[positive_sample[0]] = scale_to_unit_length(pos_h)
+                    self.entity_embeddings[positive_sample[2]] = scale_to_unit_length(pos_t)
                     # 将负例中被替换的头实体或尾实体的新向量表示放缩到单位长度, 并替换原来的向量表示
                     if positive_sample[0] != negative_sample[0]:
-                        self.entity_embeddings[negative_sample[0]] = scale_to_unit_length(negative_head)
+                        self.entity_embeddings[negative_sample[0]] = scale_to_unit_length(neg_h)
                     elif positive_sample[2] != negative_sample[2]:
-                        self.entity_embeddings[negative_sample[2]] = scale_to_unit_length(negative_tail)
+                        self.entity_embeddings[negative_sample[2]] = scale_to_unit_length(neg_t)
 
                     # TransE论文提到关系的向量表示不用缩放到单位长度
-                    self.relation_embeddings[positive_sample[1]] = relation
+                    self.relation_embeddings[positive_sample[1]] = r
+
+                # ===================== 正则化项 =========================
+                pos_r_pairs = self.pos_h_r_pairs_dict[positive_sample]
+                neg_r_pairs = self.neg_h_r_pairs_dict[positive_sample]
+                loss2 = 0
+                for (r1, r2) in pos_r_pairs:
+                    for (r3, r4) in neg_r_pairs:
+                        r1_embedding = self.relation_embeddings[r1]
+                        r2_embedding = self.relation_embeddings[r2]
+                        r3_embedding = self.relation_embeddings[r3]
+                        r4_embedding = self.relation_embeddings[r4]
+                        pos_distance = get_distance(np.dot(r1_embedding, self.matrix) - r2_embedding, self.norm)
+                        neg_distance = get_distance(np.dot(r3_embedding, self.matrix) - r4_embedding, self.norm)
+                        loss2_step = max(self.margin + pos_distance - neg_distance, 0)
+                        # 只更新正值
+                        if loss2_step > 0:
+                            pass
+
+                self.total_loss += loss1 + self.k * loss2
 
     def _generate_relation_pairs(self):
         # 过滤出头实体相同且有时间标记的四元组

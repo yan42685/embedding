@@ -11,11 +11,11 @@ def main():
     #                epsilon=0.9,
     #                evaluation_mode="validation")
 
-    # model = TransE(kg_dir=Path.cwd().parent.joinpath("target/YG15K"))
+    model = TransE(kg_dir=Path.cwd().parent.joinpath("target/YG15K"))
 
     # model = TransH(kg_dir=kg_dir)
 
-    model = TimeTransE(kg_dir=kg_dir)
+    # model = TimeTransE(kg_dir=kg_dir)
     model.train()
 
 
