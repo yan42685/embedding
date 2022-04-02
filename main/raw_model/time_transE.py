@@ -11,6 +11,7 @@ class TimeTransE(BaseModel):
         super().__init__(kg_dir, model_name, epochs, batch_size, dimension, learning_rate, margin, norm, epsilon,
                          evaluation_mode)
         self.k = k
+        # 这里必须对矩阵进行normalize，不然会大幅降低准确率
         self.matrix = normalize(np.random.rand(self.dimension, self.dimension), axis=1, norm="l1")
         # 每个头实体对应的(ri, rj)时序关系对集合
         self.pos_h_r_pairs_dict = defaultdict(set)
@@ -155,5 +156,5 @@ class TimeTransE(BaseModel):
                             self.neg_h_r_pairs_dict[(h1, r1)].add((r2, r1))
                         j += 1
                     i += 1
-        print(len(self.pos_h_r_pairs_dict))
-        print(self.pos_h_r_pairs_dict)
+        # print(len(self.pos_h_r_pairs_dict))
+        # print(self.pos_h_r_pairs_dict)
