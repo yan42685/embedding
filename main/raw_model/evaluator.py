@@ -1,4 +1,4 @@
-from tools import norm_l1, norm_l2, time_it
+from tools import get_distance, time_it
 import random
 import numpy as np
 
@@ -46,15 +46,15 @@ class Evaluator:
         train_quads_distances = []
         for (h, r, t, d) in self.train_quads:
             trained_distance = self.entity_embeddings[h] + self.relation_embeddings[r] - self.entity_embeddings[t]
-            train_quads_distances.append(self._get_distance(trained_distance))
+            train_quads_distances.append(get_distance(trained_distance, self.norm))
         train_quads_distances.sort()
         # 决定是否为正确的三元组的距离界限
         threshold = train_quads_distances[int(self.epsilon * len(train_quads_distances))]
         correct_prediction_count = 0
 
         for (h, r, t, d) in corrupted_quads:
-            distance = self._get_distance(
-                self.entity_embeddings[h] + self.relation_embeddings[r] - self.entity_embeddings[t])
+            distance = get_distance(
+                self.entity_embeddings[h] + self.relation_embeddings[r] - self.entity_embeddings[t], self.norm)
             condition1 = distance <= threshold and (h, r, t, d) in self.all_quads_set
             condition2 = distance > threshold and (h, r, t, d) not in self.all_quads_set
             if condition1 or condition2:
@@ -198,23 +198,14 @@ class Evaluator:
         for i in range(self.entity_count):
             h_predict_distance = self.entity_embeddings[i] + r - t
             t_predict_distance = h + r - self.entity_embeddings[i]
-            h_predict_distances.append(self._get_distance(h_predict_distance))
-            t_predict_distances.append(self._get_distance(t_predict_distance))
+            h_predict_distances.append(get_distance(h_predict_distance, self.norm))
+            t_predict_distances.append(get_distance(t_predict_distance, self.norm))
         for i in range(self.relation_count):
             r_predict_distance = h + self.relation_embeddings[i] - t
-            r_predict_distances.append(self._get_distance(r_predict_distance))
+            r_predict_distances.append(get_distance(r_predict_distance, self.norm))
 
         h_sorted_ids = sorted(list(range(self.entity_count)), key=lambda x: h_predict_distances[x])
         r_sorted_ids = sorted(list(range(self.relation_count)), key=lambda x: r_predict_distances[x])
         t_sorted_ids = sorted(list(range(self.entity_count)), key=lambda x: t_predict_distances[x])
 
         return h_sorted_ids, r_sorted_ids, t_sorted_ids
-
-    def _get_distance(self, vector):
-        if self.norm == "L1":
-            result = norm_l1(vector)
-        elif self.norm == "L2":
-            result = norm_l2(vector)
-        else:
-            raise RuntimeError("wrong norm")
-        return result
