@@ -89,9 +89,8 @@ class TimeTransE(BaseModel):
 
     def _regularization(self, pos_quad, pos_h_r_pairs_dict, neg_h_r_pairs_dict):
         h = pos_quad[0]
-        r = pos_quad[1]
-        pos_r_pairs = pos_h_r_pairs_dict[(h, r)]
-        neg_r_pairs = neg_h_r_pairs_dict[(h, r)]
+        pos_r_pairs = pos_h_r_pairs_dict[h]
+        neg_r_pairs = neg_h_r_pairs_dict[h]
         loss = 0
         for (r1, r2) in pos_r_pairs:
             for (r3, r4) in neg_r_pairs:
