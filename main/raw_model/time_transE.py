@@ -1,7 +1,7 @@
 from raw_model.base_model import BaseModel
 from collections import defaultdict
 from tools import get_distance, scale_to_unit_length
-from sklearn.preprocessing import normalize
+from scipy.stats import ortho_group
 import numpy as np
 
 
@@ -11,8 +11,8 @@ class TimeTransE(BaseModel):
         super().__init__(kg_dir, model_name, epochs, batch_size, dimension, learning_rate, margin, norm, epsilon,
                          evaluation_mode)
         self.k = k
-        # 这里必须对矩阵进行normalize，不然会大幅降低准确率
-        self.matrix = normalize(np.random.rand(self.dimension, self.dimension), axis=1, norm="l1")
+        # 这里必须用正交矩阵，保证r1M模长不变
+        self.matrix = ortho_group.rvs(dim=self.dimension)
 
     def _update_embeddings(self, positive_samples, negative_samples):
         pos_h_r_pairs_dict, neg_h_r_pairs_dict = self._generate_h_r_pairs_dicts(positive_samples)
