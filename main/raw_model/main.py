@@ -15,12 +15,12 @@ def main():
     #
     # model = TransE(kg_dir=kg_15K_dir, epochs=20)
 
-    # model = TimeTransE(kg_dir=kg_30K_dir, epochs=20, batch_size=100, dimension=100, learning_rate=0.001, margin=4.0,
-    #                    norm="L1",
-    #                    epsilon=0.9,
-    #                    evaluation_mode="validation", k=0.01)
+    model = TimeTransE(kg_dir=kg_30K_dir, epochs=40, batch_size=100, dimension=100, learning_rate=0.001, margin=4.0,
+                       norm="L1",
+                       epsilon=0.9,
+                       evaluation_mode="validation", k=0.01)
 
-    model = TimeTransE(kg_dir=kg_15K_dir, epochs=50)
+    # model = TimeTransE(kg_dir=kg_15K_dir, epochs=20)
 
     # TODO: 解决evaluator的问题, self.relation_embedding为空
     # model = TransH(kg_dir=Path.cwd().parent.joinpath("target/YG15K"))

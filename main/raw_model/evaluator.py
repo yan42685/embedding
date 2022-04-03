@@ -122,10 +122,10 @@ class Evaluator:
 
         print("=========== Relation Prediction =========")
         print("-----Raw-----")
-        print("MeanRank: %.1f, Hits@1: %.3f%%" % (raw_r_correct_rank_sum / test_quads_count,
+        print("MeanRank: %.2f, Hits@1: %.3f%%" % (raw_r_correct_rank_sum / test_quads_count,
                                                   100 * raw_r_hits1_count / test_quads_count))
         print("-----Filter-----")
-        print("MeanRank: %.1f, Hits@1: %.3f%%" % (filter_r_correct_rank_sum / test_quads_count,
+        print("MeanRank: %.2f, Hits@1: %.3f%%" % (filter_r_correct_rank_sum / test_quads_count,
                                                   100 * filter_r_hits1_count / test_quads_count))
 
     def _calculate_rank_data(self, test_quad):
