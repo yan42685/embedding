@@ -13,14 +13,10 @@ class TimeTransE(BaseModel):
         self.k = k
         # 这里必须对矩阵进行normalize，不然会大幅降低准确率
         self.matrix = normalize(np.random.rand(self.dimension, self.dimension), axis=1, norm="l1")
-        # 每个头实体对应的(ri, rj)时序关系对集合
-        self.pos_h_r_pairs_dict = defaultdict(set)
-        self.neg_h_r_pairs_dict = defaultdict(set)
-        self._generate_relation_pairs()
 
     def _update_embeddings(self, positive_samples, negative_samples):
+        pos_h_r_pairs_dict, neg_h_r_pairs_dict = self._generate_h_r_pairs_dicts(positive_samples)
         self.total_sample_count += len(positive_samples) * len(negative_samples)
-
         for positive_sample in positive_samples:
             loss1 = 0
             # ================ 损失函数 ===============
@@ -88,14 +84,14 @@ class TimeTransE(BaseModel):
                     self.relation_embeddings[positive_sample[1]] = r
 
             # ===================== 正则化项 =========================
-            loss2 = self._regularization(positive_sample)
+            loss2 = self._regularization(positive_sample, pos_h_r_pairs_dict, neg_h_r_pairs_dict)
             self.total_loss += loss1 + loss2
 
-    def _regularization(self, pos_quad):
+    def _regularization(self, pos_quad, pos_h_r_pairs_dict, neg_h_r_pairs_dict):
         h = pos_quad[0]
         r = pos_quad[1]
-        pos_r_pairs = self.pos_h_r_pairs_dict[(h, r)]
-        neg_r_pairs = self.neg_h_r_pairs_dict[(h, r)]
+        pos_r_pairs = pos_h_r_pairs_dict[(h, r)]
+        neg_r_pairs = neg_h_r_pairs_dict[(h, r)]
         loss = 0
         for (r1, r2) in pos_r_pairs:
             for (r3, r4) in neg_r_pairs:
@@ -138,23 +134,29 @@ class TimeTransE(BaseModel):
 
         return loss
 
-    def _generate_relation_pairs(self):
+    def _generate_h_r_pairs_dicts(self, pos_quads):
+        # 每个头实体对应的(ri, rj)时序关系对集合
+        pos_h_r_pairs_dict = defaultdict(set)
+        neg_h_r_pairs_dict = defaultdict(set)
         # 过滤出头实体相同且有时间标记的四元组
         h_quads_dict = defaultdict(list)
-        for (h, r, t, d) in self.kg.train_quads:
+        for (h, r, t, d) in pos_quads:
             if float(d) > 0:
                 h_quads_dict[h].append((h, r, t, float(d)))
-        # 如果(h1,r1,t1,d1)和(h2,r2,t2,d2)中，h1=h2且r1!=r2且d1<d2，则将(r1,r2)加入结果集
+
         for quads in h_quads_dict.values():
             if len(quads) > 1:
-                i = 0
-                for (h1, r1, t1, d1) in quads:
-                    j = 0
-                    for (h2, r2, t2, d2) in quads:
-                        if i < j and r1 != r2 and d1 < d2:
-                            self.pos_h_r_pairs_dict[(h1, r1)].add((r1, r2))
-                            self.neg_h_r_pairs_dict[(h1, r1)].add((r2, r1))
-                        j += 1
-                    i += 1
-        # print(len(self.pos_h_r_pairs_dict))
-        # print(self.pos_h_r_pairs_dict)
+                # 按时间排序
+                quads.sort(key=lambda x: x[3])
+                for i in range(len(quads)):
+                    if i < len(quads) - 1:
+                        h = quads[i][0]
+                        r1 = quads[i][1]
+                        r2 = quads[i + 1][1]
+                        # 保证前后两个quad的关系不相同
+                        if r1 != r2:
+                            pos_h_r_pairs_dict[h].add((r1, r2))
+                            neg_h_r_pairs_dict[h].add((r2, r1))
+        # print(len(pos_h_r_pairs_dict))
+        # print(pos_h_r_pairs_dict)
+        return pos_h_r_pairs_dict, neg_h_r_pairs_dict
